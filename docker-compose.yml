@@ -1,0 +1,74 @@
+services:
+  # Banco de Dados MySQL 8.4
+  mysql:
+    image: mysql:8.4
+    container_name: escriba-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-escriba}
+      MYSQL_USER: ${MYSQL_USER:-escriba}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo .env}
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - escriba-net
+
+  # Backend Laravel 13 (PHP 8.4)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: escriba-backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: "Sistema Escriba"
+      APP_ENV: local
+      APP_KEY: ${APP_KEY:?defina APP_KEY no arquivo .env}
+      APP_DEBUG: "true"
+      APP_URL: "http://localhost:8000"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-escriba}
+      DB_USERNAME: ${MYSQL_USER:-escriba}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+    ports:
+      - "8001:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - escriba-net
+
+  # Frontend React 19 + shadcn/ui (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: escriba-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - escriba-net
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  escriba-net:
+    driver: bridge

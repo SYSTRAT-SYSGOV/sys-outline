@@ -1,0 +1,532 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================
+   Design System SYS-OUTLINE / SYSGOV — Tema Moderno "High-Tech Ministerial"
+   Base: new-church (apps/web/src/index.css)
+   Paleta: azul safira institucional + acentos semânticos + dark mode
+   ========================================================================== */
+:root {
+  --radius: 0.625rem;
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+
+  /* Superfícies modernas em modo claro */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* Cores primárias — azul safira tecnológico */
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #eff6ff;
+  --secondary-foreground: #1e40af;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f0fdf4;
+  --accent-foreground: #166534;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+
+  /* Semáforo e tons semânticos vivos */
+  --success: #16a34a;
+  --success-surface: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-strong: #15803d;
+  --warning: #f59e0b;
+  --warning-surface: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-strong: #b45309;
+  --critical: #ef4444;
+  --critical-surface: #fef2f2;
+  --critical-border: #fecaca;
+  --critical-strong: #b91c1c;
+  --info: #0284c7;
+  --info-surface: #f0f9ff;
+  --info-border: #bae6fd;
+  --info-strong: #0369a1;
+  --neutral-surface: #f8fafc;
+  --neutral-border: #e2e8f0;
+  --neutral-strong: #475569;
+
+  /* Paleta institucional */
+  --gov-primary: #1d4ed8;
+  --gov-primary-hover: #1e40af;
+  --gov-primary-active: #172554;
+  --gov-primary-light: #eff6ff;
+  --gov-primary-border: #bfdbfe;
+  --gov-accent-gold: #f59e0b;
+  --gov-accent-yellow: #fbbf24;
+  --gov-page: #f8fafc;
+  --gov-surface: #ffffff;
+  --gov-border: #e2e8f0;
+  --gov-text-primary: #0f172a;
+  --gov-text-secondary: #475569;
+  --gov-text-muted: #64748b;
+
+  --gov-blue: #2563eb;
+  --gov-blue-dark: #0f172a;
+  --gov-blue-darker: #020617;
+
+  /* Sidebar translúcida / branca */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: #eff6ff;
+  --sidebar-accent-foreground: #1d4ed8;
+  --sidebar-primary: #1d4ed8;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #2563eb;
+
+  /* CTA institucional preservado para submissões críticas */
+  --coral: #f2683c;
+  --coral-dark: #d9552c;
+
+  /* Tipografia única do sistema: Inter Variable (inclui tabelas, grids e dados técnicos) */
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Modo escuro de alta tecnologia (console SaaS / obsidian) */
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --card: #0f172a;
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #93c5fd;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #93c5fd;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #3b82f6;
+
+  --success: #22c55e;
+  --success-surface: rgba(34, 197, 94, 0.12);
+  --success-border: rgba(34, 197, 94, 0.28);
+  --success-strong: #4ade80;
+  --warning: #f59e0b;
+  --warning-surface: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.28);
+  --warning-strong: #fbbf24;
+  --critical: #ef4444;
+  --critical-surface: rgba(239, 68, 68, 0.12);
+  --critical-border: rgba(239, 68, 68, 0.28);
+  --critical-strong: #f87171;
+  --info: #38bdf8;
+  --info-surface: rgba(56, 189, 248, 0.12);
+  --info-border: rgba(56, 189, 248, 0.28);
+  --info-strong: #7dd3fc;
+  --neutral-surface: #1e293b;
+  --neutral-border: rgba(255, 255, 255, 0.08);
+  --neutral-strong: #cbd5e1;
+
+  --gov-primary: #3b82f6;
+  --gov-primary-hover: #60a5fa;
+  --gov-primary-active: #2563eb;
+  --gov-primary-light: rgba(59, 130, 246, 0.15);
+  --gov-primary-border: rgba(59, 130, 246, 0.3);
+  --gov-accent-gold: #fbbf24;
+  --gov-accent-yellow: #fde047;
+  --gov-page: #090d16;
+  --gov-surface: #0f172a;
+  --gov-border: rgba(255, 255, 255, 0.09);
+  --gov-text-primary: #f8fafc;
+  --gov-text-secondary: #94a3b8;
+  --gov-text-muted: #64748b;
+
+  --gov-blue: #3b82f6;
+  --gov-blue-dark: #f8fafc;
+  --gov-blue-darker: #e2e8f0;
+
+  --sidebar: #0b1120;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-muted: #94a3b8;
+  --sidebar-accent: rgba(59, 130, 246, 0.15);
+  --sidebar-accent-foreground: #60a5fa;
+  --sidebar-primary: #3b82f6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #3b82f6;
+
+  --coral: #fb7185;
+  --coral-dark: #f43f5e;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-success-border: var(--success-border);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-warning-strong: var(--warning-strong);
+  --color-critical: var(--critical);
+  --color-critical-surface: var(--critical-surface);
+  --color-critical-border: var(--critical-border);
+  --color-critical-strong: var(--critical-strong);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --color-info-border: var(--info-border);
+  --color-info-strong: var(--info-strong);
+  --color-neutral-surface: var(--neutral-surface);
+  --color-neutral-border: var(--neutral-border);
+  --color-neutral-strong: var(--neutral-strong);
+  --color-gov-blue: var(--gov-blue);
+  --color-gov-blue-dark: var(--gov-blue-dark);
+  --color-gov-blue-darker: var(--gov-blue-darker);
+
+  --color-gov-primary: var(--gov-primary);
+  --color-gov-primary-hover: var(--gov-primary-hover);
+  --color-gov-primary-active: var(--gov-primary-active);
+  --color-gov-primary-light: var(--gov-primary-light);
+  --color-gov-primary-border: var(--gov-primary-border);
+  --color-gov-accent-gold: var(--gov-accent-gold);
+  --color-gov-accent-yellow: var(--gov-accent-yellow);
+  --color-gov-page: var(--gov-page);
+  --color-gov-surface: var(--gov-surface);
+  --color-gov-border: var(--gov-border);
+  --color-gov-text-primary: var(--gov-text-primary);
+  --color-gov-text-secondary: var(--gov-text-secondary);
+  --color-gov-text-muted: var(--gov-text-muted);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-coral: var(--coral);
+  --color-coral-dark: var(--coral-dark);
+
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    font-size: 14px;
+    margin: 0;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  ::selection {
+    background-color: var(--gov-primary-light);
+    color: var(--gov-primary-hover);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  h1, h2 {
+    color: var(--gov-primary-hover);
+  }
+
+  /* Dados técnicos e numéricos: Inter Variable com números tabulares */
+  .font-mono,
+  .tabular-nums,
+  code,
+  pre,
+  .technical-data,
+  .counter {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input[type="number"] {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.4);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  /* Painel glassmorphism */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .dark .glass-panel {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Glows e acentos de alta tecnologia */
+  .glow-primary {
+    box-shadow: 0 0 20px -3px rgba(37, 99, 235, 0.2);
+  }
+
+  .dark .glow-primary {
+    box-shadow: 0 0 25px -2px rgba(59, 130, 246, 0.35);
+  }
+
+  /* Card com elevação sutil em hover */
+  .card-modern {
+    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms ease;
+  }
+
+  .card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 4px 10px -4px rgba(15, 23, 42, 0.04);
+  }
+
+  .dark .card-modern:hover {
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 18px rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+  }
+
+  /* Select nativo estilizado */
+  .native-select {
+    display: flex;
+    height: 2.35rem;
+    width: 100%;
+    min-width: 0;
+    appearance: none;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 16px;
+    padding: 0.25rem 2.25rem 0.25rem 0.85rem;
+    font-size: 0.875rem;
+    color: var(--foreground);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .native-select:focus-visible {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+  }
+
+  .native-select:disabled {
+    cursor: not-allowed;
+    background-color: var(--muted);
+    opacity: 0.6;
+  }
+
+  .link {
+    @apply font-semibold text-primary underline-offset-4 hover:underline;
+  }
+
+  .login-grid {
+    background-image:
+      linear-gradient(to right, rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .dark .login-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+/* ==========================================================================
+   Estilos de Impressão e Folha A4 Rígida (210mm x 297mm)
+   ========================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar elementos fora da folha A4 */
+  .no-print,
+  header,
+  nav,
+  aside,
+  .sidebar,
+  .toast,
+  dialog,
+  [data-slot="sheet-overlay"],
+  button,
+  .sermon-editor-form {
+    display: none !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+  }
+
+  .scaler-wrapper {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .sheet-transform-wrapper {
+    transform: none !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .sheet,
+  .sheet-a4,
+  .a4-sheet,
+  #sheet {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    box-sizing: border-box !important;
+    padding: 6mm 8mm 5mm 8mm !important; /* Margens reais de impressão de relatório */
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    transform: none !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .sheet-a4 *,
+  #sheet * {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

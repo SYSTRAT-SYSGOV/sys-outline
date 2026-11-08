@@ -1,5 +1,10 @@
 schema: spec-driven
 
+context: |
+  Escreva todos os artefatos do OpenSpec (proposal, design, specs, tasks) em português do Brasil (pt-BR).
+  O projeto SYS-OUTLINE (Escriba da Palavra) usa backend Laravel 13 + MySQL 8 e frontend React 19 + Tailwind CSS 4.
+  Siga estritamente o DESIGN_SYSTEM.md: tipografia única Inter Variable e folha A4 fiel em página única.
+
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
 # Include constraints an agent cannot infer by reading the code.

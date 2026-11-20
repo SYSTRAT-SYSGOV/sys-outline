@@ -11,6 +11,7 @@ import { checkSpelling, applySuggestion, SpellError } from '../lib/spellchecker'
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
 import { useSettings } from '../context/SettingsContext';
 import { ReviewComments } from './ReviewComments';
+import { useLocalDraftBackup } from '../lib/useLocalDraftBackup';
 import { SheetPreview } from './SheetPreview';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -133,6 +134,11 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const isApproved = sermon.status === 'approved';
   const isDistributed = Boolean(sermon.distributed_at);
   const formReadOnly = readOnly || isApproved;
+  const { backup, markSaved, discard } = useLocalDraftBackup(
+    `escriba_draft_backup:${sermon.id ?? 'new'}`,
+    sermon,
+    !readOnly && !isApproved,
+  );
   const announcementsReadOnly = readOnly || isDistributed || (isApproved && !canCoordinate);
   const announcements = sermon.announcements ?? [];
   const unchangedFromInheritance = Boolean(inheritedAnnouncements?.length)
@@ -461,6 +467,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       }
 
       updateSermonFromResponse(res);
+      markSaved();
       if (onSaved) onSaved(res);
       showToast('Rascunho salvo com sucesso!', 'success');
     } catch (err: unknown) {
@@ -515,6 +522,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
       const res = await api.post<SermonData>(`/api/sermons/${currentId}/submit`, {});
       updateSermonFromResponse(res);
+      markSaved();
       if (onSaved) onSaved(res);
       showToast('Resumo submetido para revisão com sucesso!', 'success');
     } catch (err: unknown) {
@@ -751,6 +759,20 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
       {/* Container Principal - Exclusivo para o Formulário em Largura Total */}
       <div className="space-y-6 no-print sermon-editor-form">
+        {backup && (
+          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-warning-border bg-warning-surface px-4 py-3 text-sm font-semibold text-warning-strong">
+            <span className="flex-1">
+              Há uma cópia local não salva deste resumo ({new Date(backup.savedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}).
+            </span>
+            <Button type="button" size="sm" onClick={() => { setSermon(backup.value); discard(); }}>
+              Restaurar
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={discard}>
+              Descartar
+            </Button>
+          </div>
+        )}
+
         {/* Stepper de Ciclo de Vida do Resumo */}
         <ReviewWorkflowStepper
           currentStatus={sermon.status}

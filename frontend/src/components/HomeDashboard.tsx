@@ -14,6 +14,9 @@ interface MySchedule {
   service_date: string;
   deadline_at: string;
   status: string;
+  scribe_user_id?: number;
+  swapped_at?: string | null;
+  swapped_from?: { name: string } | null;
 }
 
 interface Shortcut {
@@ -44,6 +47,7 @@ export const HomeDashboard: React.FC<{ onNavigate: (tab: TabKey) => void }> = ({
   const role = user?.role ?? '';
   const isManager = role === 'admin' || role === 'unit_admin' || role === 'reviewer';
   const [schedules, setSchedules] = useState<MySchedule[] | null>(null);
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     if (!userId) return;
@@ -56,6 +60,14 @@ export const HomeDashboard: React.FC<{ onNavigate: (tab: TabKey) => void }> = ({
   const next = (schedules ?? [])
     .filter(s => s.status === 'pending' || s.status === 'delayed')
     .sort((a, b) => a.deadline_at.localeCompare(b.deadline_at))[0];
+
+  const received = (schedules ?? []).filter(
+    s =>
+      s.swapped_at &&
+      s.swapped_from &&
+      s.scribe_user_id === userId &&
+      now - new Date(s.swapped_at).getTime() <= 7 * 86_400_000,
+  );
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -91,6 +103,16 @@ export const HomeDashboard: React.FC<{ onNavigate: (tab: TabKey) => void }> = ({
           )}
         </section>
       )}
+
+      {received.map(s => (
+        <div key={s.id} role="status" className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
+          Você recebeu a escala do culto de{' '}
+          <strong className="tabular-nums">
+            {new Date(`${s.service_date.slice(0, 10)}T00:00`).toLocaleDateString('pt-BR')}
+          </strong>{' '}
+          de {s.swapped_from?.name}.
+        </div>
+      ))}
 
       <nav aria-label="Atalhos" className="flex flex-wrap gap-2">
         {SHORTCUTS.filter(s => s.roles.includes(role)).map(s => (

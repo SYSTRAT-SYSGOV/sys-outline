@@ -10,6 +10,7 @@ import { OrganizationsManager } from './components/OrganizationsManager';
 import { SermonsLibrary } from './components/SermonsLibrary';
 import { UsersManager } from './components/UsersManager';
 import { SettingsManager } from './components/SettingsManager';
+import { DeadlineAlert } from './components/DeadlineAlert';
 import { PublicSermon } from './pages/PublicSermon';
 import { A4PreviewModal } from './components/A4PreviewModal';
 import { StatsOverview } from './components/StatsOverview';
@@ -97,6 +98,7 @@ function AppContent() {
       onOpenA4Preview={() => setGlobalPreviewOpen(true)}
       hasSermonToPreview={Boolean(editingSermon)}
     >
+      {currentTab !== 'schedules' && <DeadlineAlert onOpenSchedules={() => setCurrentTab('schedules')} />}
       {currentTab === 'editor' && (
         <SermonEditor
           initialSermon={editingSermon}

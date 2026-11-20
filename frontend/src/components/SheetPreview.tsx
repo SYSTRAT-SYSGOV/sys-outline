@@ -88,12 +88,29 @@ export const SheetPreview: React.FC<SheetPreviewProps> = ({
     ? new Date(activeSermon.service_date).getFullYear()
     : 2026;
 
+  // Avisos estruturados têm prioridade; o legado (agenda) é usado apenas como fallback.
+  const structuredAnnouncements = (activeSermon.announcements ?? [])
+    .filter(item => item.title?.trim() || item.description?.trim());
+  const legacyAgenda = (activeSermon.agenda ?? [])
+    .filter(item => item.day_label?.trim() || item.event_description?.trim());
+  const announcementRows = structuredAnnouncements.length > 0
+    ? structuredAnnouncements.map(item => ({
+      title: item.title ?? '',
+      description: item.description ?? '',
+      isNew: Boolean(item.is_new),
+    }))
+    : legacyAgenda.map(item => ({
+      title: item.day_label ?? '',
+      description: item.event_description ?? '',
+      isNew: false,
+    }));
+
   const summaryParagraphs = formatToLines(activeSermon.summary_text);
   const themeText = activeSermon.title_theme || '(Informe o tema da ministração)';
   const scriptureText = activeSermon.scripture_reference || '(Informe o texto bíblico lido)';
   const preacherName = activeSermon.preacher_name || 'Ministrante';
   const preacherTitle = activeSermon.preacher_title || 'pela';
-  const pixKey = sermon.organization?.pix_key || (sermon as any).pix_key || 'pixcelulasci@gmail.com';
+  
   const displayAuthHash = formatAuthHash(activeSermon.auth_hash || generateClientAuthHash(activeSermon));
 
   return (
@@ -323,14 +340,21 @@ export const SheetPreview: React.FC<SheetPreviewProps> = ({
               {/* Tabela Zebrada de Horários e Eventos com Acabamento Executivo */}
               <table className="agenda-table w-full border-collapse border border-slate-300 shadow-2xs">
                 <tbody>
-                  {activeSermon.agenda && activeSermon.agenda.length > 0 ? (
-                    activeSermon.agenda.map((item, idx) => (
+                  {announcementRows.length > 0 ? (
+                    announcementRows.map((item, idx) => (
                       <tr key={idx} className={idx % 2 === 0 ? 'bg-[#C6D9F1]' : 'bg-[#EBF2FA]'}>
                         <td className="border border-slate-300 p-[0.4mm_2mm] text-[8.2pt] font-bold text-[#17365D] w-[24%]">
-                          {item.day_label}
+                          {item.title}
                         </td>
                         <td className="border border-slate-300 p-[0.4mm_2mm] text-[8.2pt] text-slate-900 font-medium">
-                          {item.event_description}
+                          <span className="inline-flex items-center gap-1.5">
+                            {item.isNew && (
+                              <span className="inline-block bg-[#FDE047] text-[#17365D] font-bold text-[6.4pt] leading-none px-1 py-[0.3mm] rounded-sm uppercase tracking-wide">
+                                NOVO
+                              </span>
+                            )}
+                            <span>{item.description}</span>
+                          </span>
                         </td>
                       </tr>
                     ))

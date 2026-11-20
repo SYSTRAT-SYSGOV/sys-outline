@@ -8,9 +8,8 @@ import {
   DialogFooter,
   Button,
   Textarea,
-  Badge,
 } from '@sysgov/ui';
-import { AlertTriangle, Tag, FileText, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Tag, RotateCcw } from 'lucide-react';
 
 interface ReturnReviewModalProps {
   isOpen: boolean;
@@ -18,6 +17,7 @@ interface ReturnReviewModalProps {
   onConfirm: (reason: string) => Promise<void>;
   sermonTheme?: string;
   sermonId?: number;
+  mode?: 'reject' | 'reopen';
 }
 
 export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
@@ -26,7 +26,9 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
   onConfirm,
   sermonTheme,
   sermonId,
+  mode = 'reject',
 }) => {
+  const isReopen = mode === 'reopen';
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,11 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason.trim()) {
-      setError('Por favor, informe detalhadamente os pontos a serem ajustados pelo escriba.');
+      setError(
+        isReopen
+          ? 'Informe o motivo da reabertura para registrar na auditoria.'
+          : 'Por favor, informe detalhadamente os pontos a serem ajustados pelo escriba.'
+      );
       return;
     }
 
@@ -57,7 +63,7 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
       setReason('');
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Erro ao registrar devolução.');
+      setError(err?.message || (isReopen ? 'Erro ao registrar reabertura.' : 'Erro ao registrar devolução.'));
     } finally {
       setSubmitting(false);
     }
@@ -68,15 +74,16 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-critical-surface text-critical border border-critical-border">
-              <AlertTriangle className="size-5" />
+            <span className={`flex size-10 shrink-0 items-center justify-center rounded-full border ${isReopen ? 'bg-info-surface text-info border-info-border' : 'bg-critical-surface text-critical border-critical-border'}`}>
+              {isReopen ? <RotateCcw className="size-5" /> : <AlertTriangle className="size-5" />}
             </span>
             <div>
               <DialogTitle className="text-foreground">
-                Devolver Resumo para Ajustes
+                {isReopen ? 'Reabrir Resumo para Revisão' : 'Devolver Resumo para Ajustes'}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                 {sermonId ? `Resumo #${sermonId} · ` : ''}{sermonTheme || 'Ministração Dominical'}
+                {isReopen ? ' · a aprovação anterior será invalidada.' : ''}
               </DialogDescription>
             </div>
           </div>
@@ -84,29 +91,34 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {/* Categorias Rápidas */}
-          <div>
-            <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Tag className="size-3 text-gov-accent-gold" />
-              <span>Inserir Apontamentos Frequentes:</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {quickCategories.map((cat, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleAddCategory(cat.note)}
-                  className="text-[11px] font-medium bg-muted/40 hover:bg-primary/10 hover:border-primary/30 text-foreground px-2.5 py-1 rounded-md border border-border transition-colors cursor-pointer"
-                >
-                  + {cat.label}
-                </button>
-              ))}
+          {!isReopen && (
+            <div>
+              <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Tag className="size-3 text-gov-accent-gold" />
+                <span>Inserir Apontamentos Frequentes:</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {quickCategories.map((cat, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddCategory(cat.note)}
+                    className="text-[11px] font-medium bg-muted/40 hover:bg-primary/10 hover:border-primary/30 text-foreground px-2.5 py-1 rounded-md border border-border transition-colors cursor-pointer"
+                  >
+                    + {cat.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Campo de Texto */}
           <div>
             <label className="block text-xs font-semibold text-foreground mb-1">
-              Observações e Orientações para o Voluntário Escriba <span className="text-destructive">*</span>
+              {isReopen
+                ? 'Motivo da Reabertura'
+                : 'Observações e Orientações para o Voluntário Escriba'}{' '}
+              <span className="text-destructive">*</span>
             </label>
             <Textarea
               rows={5}
@@ -115,7 +127,11 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
                 setReason(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="Descreva claramente as correções necessárias para que o escriba possa revisar e reenviar..."
+              placeholder={
+                isReopen
+                  ? 'Explique por que a aprovação anterior precisa ser revista. O motivo ficará registrado na auditoria.'
+                  : 'Descreva claramente as correções necessárias para que o escriba possa revisar e reenviar...'
+              }
               className="w-full text-xs sm:text-sm font-sans"
               required
             />
@@ -123,7 +139,9 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
               <p className="text-xs text-destructive mt-1 font-medium">{error}</p>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">
-              Esta orientação aparecerá em destaque vermelho no topo do editor do escriba com indicação de que o resumo foi devolvido.
+              {isReopen
+                ? 'O resumo volta para "Em Revisão", a aprovação anterior é invalidada e o ciclo completo fica auditado.'
+                : 'Esta orientação aparecerá em destaque vermelho no topo do editor do escriba com indicação de que o resumo foi devolvido.'}
             </p>
           </div>
 
@@ -139,13 +157,17 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
             </Button>
             <Button
               type="submit"
-              variant="destructive"
+              variant={isReopen ? 'default' : 'destructive'}
               size="sm"
               disabled={submitting}
               className="gap-1.5 font-bold"
             >
-              <AlertTriangle className="size-3.5" />
-              <span>{submitting ? 'Devolvendo...' : 'Confirmar Devolução'}</span>
+              {isReopen ? <RotateCcw className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
+              <span>
+                {isReopen
+                  ? (submitting ? 'Reabrindo...' : 'Confirmar Reabertura')
+                  : (submitting ? 'Devolvendo...' : 'Confirmar Devolução')}
+              </span>
             </Button>
           </DialogFooter>
         </form>

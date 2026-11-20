@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SermonData, formatAuthHash, generateClientAuthHash } from '../lib/sermonUtils';
+import React, { useEffect, useState } from 'react';
+import { SermonData, formatAuthHash, generateClientAuthHash, hasAnnouncementContent } from '../lib/sermonUtils';
 import { SheetPreview } from './SheetPreview';
 import { Button } from './ui/button';
 import { Printer, X, ZoomIn, ZoomOut, RotateCcw, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
@@ -8,20 +8,31 @@ interface A4PreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   sermon: SermonData | null;
+  onPreviewed?: () => void;
 }
 
 export const A4PreviewModal: React.FC<A4PreviewModalProps> = ({
   isOpen,
   onClose,
   sermon,
+  onPreviewed,
 }) => {
   const [scale, setScale] = useState<number>(0.9);
   const [isOverflowing, setIsOverflowing] = useState<boolean>(false);
   const [currentHeight, setCurrentHeight] = useState<number>(0);
 
+  const previewable = Boolean(sermon && hasAnnouncementContent(sermon));
+
+  useEffect(() => {
+    if (isOpen && previewable && onPreviewed) {
+      onPreviewed();
+    }
+  }, [isOpen, previewable, onPreviewed]);
+
   if (!isOpen || !sermon) return null;
 
   const handlePrint = () => {
+    if (!previewable) return;
     window.print();
   };
 
@@ -90,7 +101,8 @@ export const A4PreviewModal: React.FC<A4PreviewModalProps> = ({
             <Button
               onClick={handlePrint}
               size="sm"
-              className="bg-primary hover:bg-primary/90 text-white flex items-center gap-1.5 font-semibold text-xs cursor-pointer shadow-md"
+              disabled={!previewable}
+              className="bg-primary hover:bg-primary/90 text-white flex items-center gap-1.5 font-semibold text-xs cursor-pointer shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer className="w-4 h-4" />
               <span>Imprimir / Gerar PDF</span>
@@ -109,16 +121,28 @@ export const A4PreviewModal: React.FC<A4PreviewModalProps> = ({
 
         {/* Modal Sheet Canvas Body */}
         <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center bg-[#090D16]">
-          <div className="inline-block transition-transform duration-150">
-            <SheetPreview
-              sermon={sermon}
-              scale={scale}
-              onOverflowChange={(overflow, height) => {
-                setIsOverflowing(overflow);
-                setCurrentHeight(height);
-              }}
-            />
-          </div>
+          {!previewable ? (
+            <div className="flex max-w-md flex-col items-center justify-center gap-3 self-center rounded-xl border border-amber-500/40 bg-amber-500/10 p-6 text-center">
+              <AlertTriangle className="w-8 h-8 text-amber-300" />
+              <p className="text-sm font-semibold text-amber-100">
+                Inclua ao menos um aviso da semana antes de visualizar e imprimir a folha A4.
+              </p>
+              <p className="text-xs text-amber-200/80">
+                O bloco de avisos é obrigatório para a distribuição do documento dominical.
+              </p>
+            </div>
+          ) : (
+            <div className="inline-block transition-transform duration-150">
+              <SheetPreview
+                sermon={sermon}
+                scale={scale}
+                onOverflowChange={(overflow, height) => {
+                  setIsOverflowing(overflow);
+                  setCurrentHeight(height);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Modal Footer Info com Hash de Autenticação */}

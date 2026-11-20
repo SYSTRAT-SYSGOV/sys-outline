@@ -1,9 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   SermonData,
-  SAMPLE_SERMON,
   LIMITE_RESUMO,
   countVisibleChars,
+  AnnouncementItem,
+  announcementsFromAgenda,
+  hasAnnouncementContent,
+  MAX_ANNOUNCEMENTS,
 } from '../lib/sermonUtils';
 import { checkSpelling, applySuggestion, SpellError } from '../lib/spellchecker';
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
@@ -17,6 +20,8 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { A4PreviewModal } from './A4PreviewModal';
 import { ReviewWorkflowStepper } from './ReviewWorkflowStepper';
+import { AnnouncementsEditor } from './AnnouncementsEditor';
+import { ReturnReviewModal } from './ReturnReviewModal';
 import {
   Bold,
   Italic,
@@ -39,7 +44,6 @@ import {
   ChevronUp,
   ChevronDown,
   RotateCcw,
-  Sparkles,
   History,
   Eye,
   Upload,
@@ -75,6 +79,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       summary_text: '',
       questions: [{ question_text: '' }],
       agenda: [{ day_label: '', event_description: '' }],
+      announcements: [],
       organization_id: user?.organization?.id || null,
       organization: user?.organization ? {
         id: user.organization.id,
@@ -89,13 +94,21 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [savingAnnouncements, setSavingAnnouncements] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isA4ModalOpen, setIsA4ModalOpen] = useState(false);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [inheritedAnnouncements, setInheritedAnnouncements] = useState<AnnouncementItem[] | null>(() => {
+    if (initialSermon?.announcements_source_date && (initialSermon.announcements?.length ?? 0) > 0) {
+      return initialSermon.announcements ?? null;
+    }
+    return null;
+  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   // Spellchecker state
-  const [spellErrors, setSpellErrors] = useState<SpellError[]>([]);
+  const spellErrors = useMemo<SpellError[]>(() => checkSpelling(sermon.summary_text), [sermon.summary_text]);
   const [showSpellPanel, setShowSpellPanel] = useState(false);
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -112,13 +125,14 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const isOverLimit = charCount > LIMITE_RESUMO;
   const isWarning = charCount >= LIMITE_RESUMO * 0.9 && !isOverLimit;
 
-  // Run spellcheck when requested or text changes (debounced)
-  useEffect(() => {
-    if (showSpellPanel) {
-      const errs = checkSpelling(sermon.summary_text);
-      setSpellErrors(errs);
-    }
-  }, [sermon.summary_text, showSpellPanel]);
+  const canCoordinate = ['admin', 'unit_admin', 'reviewer'].includes(user?.role || '');
+  const isApproved = sermon.status === 'approved';
+  const isDistributed = Boolean(sermon.distributed_at);
+  const formReadOnly = readOnly || isApproved;
+  const announcementsReadOnly = readOnly || isDistributed || (isApproved && !canCoordinate);
+  const announcements = sermon.announcements ?? [];
+  const unchangedFromInheritance = Boolean(inheritedAnnouncements?.length)
+    && JSON.stringify(announcements) === JSON.stringify(inheritedAnnouncements);
 
   // Handle formatting shortcuts (Ctrl+B, Ctrl+I, Ctrl+U)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -226,9 +240,6 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const handleApplySpellSuggestion = (err: SpellError) => {
     const updated = applySuggestion(sermon.summary_text, err);
     setSermon(prev => ({ ...prev, summary_text: updated }));
-    // Re-check
-    const nextErrors = checkSpelling(updated);
-    setSpellErrors(nextErrors);
     showToast(`Substituído "${err.word}" por "${err.suggestion}"`, 'success');
   };
 
@@ -267,46 +278,48 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
     });
   };
 
-  // Agenda manipulation
-  const handleAddAgendaItem = () => {
-    setSermon(prev => ({
-      ...prev,
-      agenda: [...prev.agenda, { day_label: '', event_description: '' }],
-    }));
+  const handleAnnouncementsChange = (next: AnnouncementItem[]) => {
+    setSermon(prev => ({ ...prev, announcements: next }));
   };
 
-  const handleAgendaChange = (
-    index: number,
-    field: 'day_label' | 'event_description',
-    val: string
-  ) => {
-    setSermon(prev => {
-      const updated = [...prev.agenda];
-      updated[index] = { ...updated[index], [field]: val };
-      return { ...prev, agenda: updated };
-    });
+  const handleSaveAnnouncements = async () => {
+    if (!sermon.id) {
+      showToast('Salve o rascunho antes de atualizar os avisos.', 'error');
+      return;
+    }
+
+    setSavingAnnouncements(true);
+    try {
+      const res = await api.put<any>(`/api/sermons/${sermon.id}/announcements`, {
+        announcements: sermon.announcements ?? [],
+      });
+      const data = res?.data || res;
+      updateSermonFromResponse(data);
+      showToast('Avisos da semana atualizados com sucesso!', 'success');
+    } catch (err: unknown) {
+      const error = err as { message?: string; errors?: Record<string, string[]> };
+      const firstErr = error.errors ? Object.values(error.errors)[0]?.[0] : null;
+      showToast(firstErr || error.message || 'Erro ao atualizar avisos.', 'error');
+    } finally {
+      setSavingAnnouncements(false);
+    }
   };
 
-  const handleRemoveAgendaItem = (index: number) => {
-    setSermon(prev => {
-      const updated = prev.agenda.filter((_, i) => i !== index);
-      return {
-        ...prev,
-        agenda: updated.length ? updated : [{ day_label: '', event_description: '' }],
-      };
-    });
+  const handleReopen = async (reason: string) => {
+    if (!sermon.id) return;
+
+    const res = await api.post<any>(`/api/sermons/${sermon.id}/reopen`, { reason });
+    const data = res?.data || res;
+    updateSermonFromResponse(data);
+    showToast('Resumo reaberto para revisão. A aprovação anterior foi invalidada.', 'success');
   };
 
-  const handleMoveAgendaItem = (index: number, direction: 'up' | 'down') => {
-    setSermon(prev => {
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.agenda.length) return prev;
-      const updated = [...prev.agenda];
-      const temp = updated[index];
-      updated[index] = updated[targetIndex];
-      updated[targetIndex] = temp;
-      return { ...prev, agenda: updated };
-    });
+  const openA4Preview = () => {
+    if (!hasAnnouncementContent(sermon)) {
+      showToast('Inclua ao menos um aviso antes de gerar a folha A4.', 'error');
+      return;
+    }
+    setIsA4ModalOpen(true);
   };
 
   // Helper to build payload ensuring compatibility with backend schema
@@ -337,9 +350,14 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
         ?.map(q => q.question_text?.trim())
         .filter(Boolean) || [],
       questions: sermon.questions,
-      weekly_agenda: sermon.agenda
-        ?.map(a => ({ dia: a.day_label?.trim() || '', aviso: a.event_description?.trim() || '' }))
-        .filter(a => a.dia || a.aviso) || [],
+      announcements: sermon.announcements ?? [],
+      weekly_agenda: (sermon.announcements && sermon.announcements.length > 0)
+        ? sermon.announcements
+          .map(a => ({ dia: a.title?.trim() || '', aviso: a.description?.trim() || '' }))
+          .filter(a => a.dia || a.aviso)
+        : sermon.agenda
+          ?.map(a => ({ dia: a.day_label?.trim() || '', aviso: a.event_description?.trim() || '' }))
+          .filter(a => a.dia || a.aviso) || [],
       agenda: sermon.agenda,
     };
   };
@@ -369,6 +387,13 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
         : (res.weekly_agenda_items && res.weekly_agenda_items.length > 0)
           ? res.weekly_agenda_items.map((a: any) => ({ day_label: a.day_time_text, event_description: a.description_text }))
           : prev.agenda,
+      announcements: res.announcements !== undefined
+        ? res.announcements
+        : prev.announcements,
+      announcements_source_date: res.announcements_source_date !== undefined
+        ? res.announcements_source_date
+        : prev.announcements_source_date,
+      distributed_at: res.distributed_at !== undefined ? res.distributed_at : prev.distributed_at,
     }));
   };
 
@@ -510,10 +535,25 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
         return;
       }
 
+      const inherited: AnnouncementItem[] = Array.isArray(data.announcements) && data.announcements.length > 0
+        ? data.announcements
+        : announcementsFromAgenda(
+          data.weekly_agenda_items && data.weekly_agenda_items.length > 0
+            ? data.weekly_agenda_items.map((it: any) => ({
+              day_label: it.day_time_text,
+              event_description: it.description_text,
+            }))
+            : undefined
+        );
+
+      setInheritedAnnouncements(inherited.length > 0 ? inherited : null);
+
       setSermon(prev => ({
         ...prev,
         cell_aim: data.cell_direction || prev.cell_aim,
         leader_guidelines: data.leader_guidelines || prev.leader_guidelines,
+        announcements: inherited.length > 0 ? inherited : prev.announcements,
+        announcements_source_date: data.announcements_source_date || data.service_date || null,
         agenda: data.weekly_agenda_items && data.weekly_agenda_items.length > 0
           ? data.weekly_agenda_items.map((it: any) => ({
             day_label: it.day_time_text,
@@ -531,6 +571,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   };
 
   const handleClear = () => {
+    setInheritedAnnouncements(null);
     setSermon({
       status: 'draft',
       title_theme: '',
@@ -544,6 +585,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
       summary_text: '',
       questions: [{ question_text: '' }],
       agenda: [{ day_label: '', event_description: '' }],
+      announcements: [],
     });
     showToast('Campos limpos para nova mensagem.', 'info');
   };
@@ -558,6 +600,10 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   };
 
   const handlePrint = () => {
+    if (!hasAnnouncementContent(sermon)) {
+      showToast('Inclua ao menos um aviso antes de gerar a folha A4.', 'error');
+      return;
+    }
     window.print();
   };
 
@@ -617,7 +663,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
         {/* Buttons Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
-          {!readOnly && (
+          {!formReadOnly && (
             <>
               <Button
                 variant="outline"
@@ -655,7 +701,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setIsA4ModalOpen(true)}
+            onClick={openA4Preview}
             className="border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white text-xs h-8 font-semibold shadow-2xs"
           >
             <Eye className="w-3.5 h-3.5 mr-1 text-gov-accent-gold" />
@@ -682,7 +728,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
             Imprimir / PDF
           </Button>
 
-          {!readOnly && (
+          {!formReadOnly && (
             <Button
               variant="default"
               size="sm"
@@ -707,6 +753,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
           rejectionReason={sermon.rejection_reason}
           reviewerName={sermon.reviewer?.name}
           approvedAt={sermon.approved_at}
+          distributedAt={sermon.distributed_at}
         />
 
         {/* Painel de Apontamentos do Revisor (quando DEVOLVIDO/REJEITADO) */}
@@ -766,7 +813,9 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   Ministração Homologada e Aprovada para as Células!
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Esta mensagem foi validada e está liberada para distribuição aos líderes de célula e impressão em folha única A4.
+                  {sermon.distributed_at
+                    ? 'Documento dominical distribuído e travado. Alterações seguem por um novo ciclo editorial.'
+                    : 'Texto, tema e preletor estão congelados. Reabra para revisão para alterar o conteúdo.'}
                 </p>
               </div>
             </div>
@@ -784,7 +833,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setIsA4ModalOpen(true)}
+                onClick={openA4Preview}
                 className="border-primary/30 bg-card text-primary hover:bg-primary hover:text-white text-xs font-semibold gap-1.5 h-8"
               >
                 <Eye className="size-3.5 text-gov-accent-gold" />
@@ -799,6 +848,30 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 <Printer className="size-3.5" />
                 <span>Imprimir A4</span>
               </Button>
+
+              {canCoordinate && !readOnly && !sermon.distributed_at && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSaveAnnouncements}
+                    disabled={savingAnnouncements}
+                    className="border-info-border bg-info-surface text-info-strong hover:bg-info hover:text-white text-xs font-semibold gap-1.5 h-8"
+                  >
+                    <Save className="size-3.5" />
+                    <span>{savingAnnouncements ? 'Salvando...' : 'Salvar Avisos'}</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setShowReopenModal(true)}
+                    className="bg-primary hover:bg-primary/90 text-white text-xs font-bold gap-1.5 h-8"
+                  >
+                    <RotateCcw className="size-3.5" />
+                    <span>Reabrir para Revisão</span>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -828,7 +901,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsA4ModalOpen(true)}
+              onClick={openA4Preview}
               className="border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white font-semibold text-xs shadow-2xs cursor-pointer flex items-center gap-1.5 h-8"
             >
               <Eye className="size-3.5 text-gov-accent-gold" />
@@ -858,7 +931,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 onChange={e => setSermon(prev => ({ ...prev, title_theme: e.target.value }))}
                 placeholder="Tema da ministração"
                 maxLength={200}
-                disabled={readOnly}
+                disabled={formReadOnly}
                 className="text-sm font-semibold text-foreground"
               />
             </div>
@@ -877,7 +950,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                       preacher_title: e.target.value as 'pelo' | 'pela',
                     }))
                   }
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                   className="w-full h-9 rounded-md border border-input bg-card px-2 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-ring"
                 >
                   <option value="pela">pela</option>
@@ -895,7 +968,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   onChange={e => setSermon(prev => ({ ...prev, preacher_name: e.target.value }))}
                   placeholder="Nome do(a) ministrante"
                   maxLength={120}
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                 />
               </div>
 
@@ -908,7 +981,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   type="date"
                   value={sermon.service_date}
                   onChange={e => setSermon(prev => ({ ...prev, service_date: e.target.value }))}
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                 />
               </div>
 
@@ -922,7 +995,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   onChange={e => setSermon(prev => ({ ...prev, location: e.target.value }))}
                   placeholder="Ex: Casa de Israel - Catedral"
                   maxLength={120}
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                 />
               </div>
             </div>
@@ -940,7 +1013,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   onChange={e => setSermon(prev => ({ ...prev, location: e.target.value }))}
                   placeholder="Ex: Casa de Israel - Catedral ou Núcleo Sul"
                   maxLength={120}
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                   className="text-xs font-semibold"
                 />
                 <span className="text-[11px] text-muted-foreground block">
@@ -984,7 +1057,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                         type="file"
                         accept="image/*"
                         onChange={handlePixImageUpload}
-                        disabled={readOnly}
+                        disabled={formReadOnly}
                         className="hidden"
                       />
                     </label>
@@ -1027,7 +1100,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   value={sermon.cell_aim}
                   onChange={e => setSermon(prev => ({ ...prev, cell_aim: e.target.value }))}
                   placeholder="Roteiro de direcionamento para a reunião da célula"
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                 />
               </div>
 
@@ -1042,7 +1115,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   value={sermon.leader_guidelines}
                   onChange={e => setSermon(prev => ({ ...prev, leader_guidelines: e.target.value }))}
                   placeholder="Instruções e avisos específicos para a liderança"
-                  disabled={readOnly}
+                  disabled={formReadOnly}
                 />
               </div>
             </div>
@@ -1069,7 +1142,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 }
                 placeholder="Livro, capítulo e versículos bíblicos"
                 maxLength={120}
-                disabled={readOnly}
+                disabled={formReadOnly}
               />
             </div>
 
@@ -1110,7 +1183,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => wrapFormat('**')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Negrito (Ctrl+B)"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center font-bold cursor-pointer"
                   >
@@ -1119,7 +1192,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => wrapFormat('*')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Itálico (Ctrl+I)"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1128,7 +1201,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => wrapFormat('__')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Sublinhado (Ctrl+U)"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1137,7 +1210,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => wrapFormat('~~')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Tachado"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1147,7 +1220,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => insertLinePrefix('• ')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Lista com Marcadores"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1156,7 +1229,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => insertLinePrefix('1. ')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Lista Numerada"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1165,7 +1238,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={() => insertLinePrefix('> ')}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Citação / Destaque"
                     className="p-1.5 rounded-md bg-card border border-border text-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1182,7 +1255,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   <button
                     type="button"
                     onClick={clearFormattingFromSelection}
-                    disabled={readOnly}
+                    disabled={formReadOnly}
                     title="Limpar formatação da seleção"
                     className="p-1.5 rounded-md bg-card border border-border text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center cursor-pointer"
                   >
@@ -1221,7 +1294,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 onChange={e => setSermon(prev => ({ ...prev, summary_text: e.target.value }))}
                 onKeyDown={handleKeyDown}
                 placeholder="Resumo estruturado da ministração..."
-                disabled={readOnly}
+                disabled={formReadOnly}
                 style={{ textAlign: 'justify' }}
                 className={cn(
                   "font-sans text-[12px] leading-relaxed text-justify p-3.5 bg-card tracking-normal",
@@ -1286,7 +1359,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                               {err.suggestion}
                             </span>
                           </div>
-                          {!readOnly && (
+                          {!formReadOnly && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -1316,7 +1389,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                   </span>
                   Compartilhamento (Aplicação Prática)
                 </h2>
-                {!readOnly && (
+                {!formReadOnly && (
                   <Button
                     type="button"
                     size="sm"
@@ -1341,11 +1414,11 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                         value={q.question_text}
                         onChange={e => handleQuestionChange(idx, e.target.value)}
                         placeholder={`Pergunta ${idx + 1}`}
-                        disabled={readOnly}
+                        disabled={formReadOnly}
                         className="text-xs bg-card"
                       />
                     </div>
-                    {!readOnly && (
+                    {!formReadOnly && (
                       <div className="flex items-center gap-0.5 pt-1">
                         <button
                           type="button"
@@ -1380,82 +1453,25 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
               </div>
             </div>
 
-            {/* Section 5: Agenda — Avisos da Semana */}
-            <div className="bg-card rounded-xl border border-border !border-l-[5px] !border-l-success p-5 sm:p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs uppercase font-bold tracking-wider text-foreground flex items-center gap-2">
-                  <span className="size-5 rounded-full bg-success text-white flex items-center justify-center text-[11px] font-mono font-bold">
-                    5
-                  </span>
-                  Agenda — Avisos da Semana
-                </h2>
-                {!readOnly && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAddAgendaItem}
-                    className="text-xs text-primary hover:bg-primary/10 h-7 px-2.5 border-border font-semibold"
-                  >
-                    <Plus className="size-3.5 mr-1" />
-                    Adicionar Aviso
-                  </Button>
-                )}
+            {/* Section 5: Agenda — Avisos da Semana (bloco estruturado) */}
+            <div className="rounded-xl border border-border !border-l-[5px] !border-l-success shadow-xs overflow-hidden">
+              <div className="flex items-center gap-2 px-5 pt-4 pb-1">
+                <span className="size-5 rounded-full bg-success text-white flex items-center justify-center text-[11px] font-mono font-bold">
+                  5
+                </span>
+                <span className="text-xs uppercase font-bold tracking-wider text-foreground">
+                  Avisos da Semana
+                </span>
               </div>
-
-              <div className="space-y-2.5">
-                {sermon.agenda.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <div className="w-[130px] shrink-0">
-                      <Input
-                        value={item.day_label}
-                        onChange={e => handleAgendaChange(idx, 'day_label', e.target.value)}
-                        placeholder="Dia / Horário"
-                        disabled={readOnly}
-                        className="text-xs font-semibold bg-card"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        value={item.event_description}
-                        onChange={e => handleAgendaChange(idx, 'event_description', e.target.value)}
-                        placeholder="Evento / Aviso da semana"
-                        disabled={readOnly}
-                        className="text-xs bg-card"
-                      />
-                    </div>
-                    {!readOnly && (
-                      <div className="flex items-center gap-0.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveAgendaItem(idx, 'up')}
-                          disabled={idx === 0}
-                          className="p-1 rounded hover:bg-muted disabled:opacity-30 text-muted-foreground cursor-pointer"
-                          title="Subir"
-                        >
-                          <ChevronUp className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveAgendaItem(idx, 'down')}
-                          disabled={idx === sermon.agenda.length - 1}
-                          className="p-1 rounded hover:bg-muted disabled:opacity-30 text-muted-foreground cursor-pointer"
-                          title="Descer"
-                        >
-                          <ChevronDown className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAgendaItem(idx)}
-                          className="p-1 rounded hover:bg-critical-surface text-muted-foreground hover:text-critical cursor-pointer"
-                          title="Remover"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="p-3 sm:p-4">
+                <AnnouncementsEditor
+                  value={announcements}
+                  onChange={handleAnnouncementsChange}
+                  readOnly={announcementsReadOnly}
+                  inheritedFrom={sermon.announcements_source_date}
+                  unchangedFromInheritance={unchangedFromInheritance}
+                  maxItems={MAX_ANNOUNCEMENTS}
+                />
               </div>
             </div>
           </div>
@@ -1470,7 +1486,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              {!readOnly && (
+              {!formReadOnly && (
                 <Button
                   type="button"
                   variant="outline"
@@ -1486,14 +1502,14 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsA4ModalOpen(true)}
+                onClick={openA4Preview}
                 className="border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white font-semibold text-xs shadow-2xs cursor-pointer flex items-center gap-1.5 h-9"
               >
                 <Eye className="w-4 h-4 text-gov-accent-gold" />
                 <span>Pré-visualizar Folha A4</span>
               </Button>
 
-              {!readOnly && (
+              {!formReadOnly && (
                 <Button
                   type="button"
                   variant="default"
@@ -1520,6 +1536,16 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
         isOpen={isA4ModalOpen}
         onClose={() => setIsA4ModalOpen(false)}
         sermon={sermon}
+      />
+
+      {/* Modal de Reabertura Formal */}
+      <ReturnReviewModal
+        isOpen={showReopenModal}
+        onClose={() => setShowReopenModal(false)}
+        onConfirm={handleReopen}
+        sermonId={sermon.id}
+        sermonTheme={sermon.title_theme || sermon.theme}
+        mode="reopen"
       />
     </div>
   );

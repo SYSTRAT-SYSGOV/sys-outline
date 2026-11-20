@@ -39,6 +39,7 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   isLoading?: boolean;
   rowKey?: (row: T, index: number) => string | number;
+  rowClassName?: (row: T, index: number) => string;
 }
 
 export function DataTable<T>({
@@ -52,6 +53,7 @@ export function DataTable<T>({
   emptyMessage = 'Nenhum registro encontrado.',
   isLoading = false,
   rowKey,
+  rowClassName,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function DataTable<T>({
   const sortedData = useMemo(() => {
     if (!sortKey) return filteredData;
 
-    return [...filteredData].sort((a: any, b: any) => {
+    return filteredData.toSorted((a: any, b: any) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
 
@@ -254,7 +256,7 @@ export function DataTable<T>({
                 return (
                   <tr
                     key={key}
-                    className="hover:bg-muted/60 transition-colors group"
+                    className={`hover:bg-muted/60 transition-colors group ${rowClassName ? rowClassName(row, idx) : ''}`}
                   >
                     {columns.map(col => (
                       <td key={col.key} className={`p-3.5 align-middle ${col.className || ''}`}>

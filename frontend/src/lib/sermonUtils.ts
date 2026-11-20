@@ -11,6 +11,14 @@ export interface AgendaItem {
   order_index?: number;
 }
 
+export interface AnnouncementItem {
+  id?: string;
+  title: string;
+  description: string;
+  expires_at?: string | null;
+  is_new?: boolean;
+}
+
 export interface SermonData {
   id?: number;
   duty_schedule_id?: number | null;
@@ -58,6 +66,15 @@ export interface SermonData {
   };
   questions: SharingQuestionItem[];
   agenda: AgendaItem[];
+  announcements?: AnnouncementItem[];
+  announcements_source_date?: string | null;
+  announcements_locked_at?: string | null;
+  distributed_at?: string | null;
+  reopen_count?: number;
+  pending_since?: string | null;
+  return_count?: number;
+  needs_coordinator_attention?: boolean;
+  days_until_sunday?: number | null;
   sharing_questions?: Array<{ id?: number; question_text: string; order_index?: number }>;
   weekly_agenda_items?: Array<{ id?: number; day_time_text: string; description_text: string; order_index?: number }>;
   audit_logs?: Array<{
@@ -72,7 +89,43 @@ export interface SermonData {
 }
 
 export const LIMITE_RESUMO = 3400;
+export const MAX_ANNOUNCEMENTS = 8;
 export const A4_HEIGHT_PX = (297 * 96) / 25.4; // 1122.52 px
+
+/**
+ * Considera o bloco preenchido quando há avisos estruturados ou, no legado,
+ * itens de agenda com conteúdo.
+ */
+export function hasAnnouncementContent(sermon: Partial<SermonData>): boolean {
+  const items = sermon.announcements ?? [];
+  if (items.some(item => item.title?.trim() || item.description?.trim())) {
+    return true;
+  }
+
+  const agenda = sermon.agenda ?? [];
+  return agenda.some(item => item.day_label?.trim() || item.event_description?.trim());
+}
+
+/**
+ * Converte a agenda legada no bloco estruturado de avisos.
+ */
+export function announcementsFromAgenda(agenda?: AgendaItem[]): AnnouncementItem[] {
+  return (agenda ?? [])
+    .filter(item => item.day_label?.trim() || item.event_description?.trim())
+    .map((item, index) => ({
+      id: `legacy-${item.id ?? index}`,
+      title: item.day_label ?? '',
+      description: item.event_description ?? '',
+      expires_at: null,
+      is_new: false,
+    }));
+}
+
+export function formatShortDate(iso?: string | null): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!match) return '';
+  return `${match[3]}/${match[2]}`;
+}
 
 export function norm(s: string | null | undefined): string {
   return String(s ?? '').replace(/\r\n?/g, '\n');

@@ -1,6 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Clock, Edit3, AlertCircle, FileCheck, ArrowRight } from 'lucide-react';
-import { Badge } from '@sysgov/ui';
+import { CheckCircle2, Clock, Edit3, AlertCircle, FileCheck, Send } from 'lucide-react';
 
 export type SermonWorkflowStatus = 'draft' | 'submitted' | 'in_review' | 'approved' | 'rejected';
 
@@ -9,16 +8,20 @@ interface ReviewWorkflowStepperProps {
   rejectionReason?: string | null;
   approvedAt?: string | null;
   reviewerName?: string | null;
+  distributedAt?: string | null;
   className?: string;
 }
 
 export const ReviewWorkflowStepper: React.FC<ReviewWorkflowStepperProps> = ({
   currentStatus,
   rejectionReason,
-  approvedAt,
+  approvedAt: _approvedAt,
   reviewerName,
+  distributedAt,
   className = '',
 }) => {
+  const isDistributed = Boolean(distributedAt);
+
   const steps = [
     {
       key: 'draft',
@@ -49,7 +52,20 @@ export const ReviewWorkflowStepper: React.FC<ReviewWorkflowStepperProps> = ({
     },
   ];
 
+  if (isDistributed) {
+    steps.push({
+      key: 'distributed',
+      label: 'Distribuído',
+      desc: 'Documento dominical travado e distribuído',
+      icon: Send,
+    });
+  }
+
   const getStepIndex = (status: SermonWorkflowStatus): number => {
+    if (isDistributed) {
+      return 4;
+    }
+
     switch (status) {
       case 'draft':
         return 0;
@@ -92,7 +108,7 @@ export const ReviewWorkflowStepper: React.FC<ReviewWorkflowStepperProps> = ({
               {currentStatus === 'draft' && 'Rascunho'}
               {currentStatus === 'submitted' && 'Submetido'}
               {currentStatus === 'in_review' && 'Em Revisão'}
-              {currentStatus === 'approved' && 'Aprovado'}
+              {currentStatus === 'approved' && (isDistributed ? 'Distribuído' : 'Aprovado')}
               {currentStatus === 'rejected' && 'Devolvido'}
             </span>
           </div>
@@ -106,7 +122,7 @@ export const ReviewWorkflowStepper: React.FC<ReviewWorkflowStepperProps> = ({
       </div>
 
       {/* Stepper Grid / Horizontal Trail */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div className={`grid grid-cols-2 ${isDistributed ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-2.5`}>
         {steps.map((step, idx) => {
           const Icon = step.icon;
           const isDone = idx < currentIndex;

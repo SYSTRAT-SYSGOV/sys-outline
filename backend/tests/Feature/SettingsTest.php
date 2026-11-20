@@ -151,7 +151,7 @@ class SettingsTest extends TestCase
         $admin = $this->tokenFor('admin', 'catedral');
 
         $this->asToken($admin)->putJson('/api/settings', ['settings' => ['nao_existe' => 1]])->assertUnprocessable();
-        $this->asToken($admin)->putJson('/api/settings', ['settings' => ['default_service_time' => '25:99']])->assertUnprocessable();
+        $this->asToken($admin)->putJson('/api/settings', ['settings' => ['default_deadline_hours' => 0]])->assertUnprocessable();
     }
 
     public function test_changes_are_audited_with_old_and_new_values(): void

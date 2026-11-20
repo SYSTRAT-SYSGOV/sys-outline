@@ -4,7 +4,6 @@ import { useAuth } from './AuthContext';
 
 export type SettingKey =
   | 'summary_char_limit'
-  | 'default_service_time'
   | 'default_deadline_hours'
   | 'a4_footer_text'
   | 'whatsapp_footer';
@@ -13,7 +12,6 @@ export type SettingSource = 'unit' | 'global' | 'default';
 
 export interface AppSettings {
   summary_char_limit: number;
-  default_service_time: string;
   default_deadline_hours: number;
   a4_footer_text: string;
   whatsapp_footer: string;
@@ -24,7 +22,6 @@ export type EffectiveSettings = Record<SettingKey, { value: any; source: Setting
 /** Padrões iguais aos do backend (SettingsRegistry), usados até a API responder. */
 export const DEFAULT_SETTINGS: AppSettings = {
   summary_char_limit: 3400,
-  default_service_time: '19:00',
   default_deadline_hours: 72,
   a4_footer_text: '',
   whatsapp_footer: '',

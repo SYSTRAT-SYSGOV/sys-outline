@@ -12,7 +12,7 @@
 ## Chamadas minhas (a confirmar)
 
 - Unidade só pode **reduzir** o limite de caracteres, nunca ultrapassar o global, para preservar a folha única A4. O global tem teto de 3.400 até o layout A4 ser parametrizado.
-- Prazo padrão inicial de 72 horas após o culto; horário padrão do culto permanece 19:00.
+- Prazo padrão inicial de 72 horas após o culto. O horário padrão do culto não é configurável: o turno da escala já define o horário (manhã 09:00, tarde 12:00, noite 18:30).
 - Rodapé da folha A4 limitado a 200 caracteres; rodapé opcional do WhatsApp (`whatsapp_footer`, até 300) é acrescentado ao fim da mensagem existente, que continua rica e estruturada.
 
 ## Riscos

@@ -19,10 +19,6 @@ class SettingsRegistry
                 'default' => self::SUMMARY_CHAR_LIMIT_MAX,
                 'rules' => ['integer', 'min:500', 'max:'.self::SUMMARY_CHAR_LIMIT_MAX],
             ],
-            'default_service_time' => [
-                'default' => '19:00',
-                'rules' => ['string', 'date_format:H:i'],
-            ],
             'default_deadline_hours' => [
                 'default' => 72,
                 'rules' => ['integer', 'min:1', 'max:336'],

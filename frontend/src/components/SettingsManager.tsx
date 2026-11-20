@@ -13,7 +13,7 @@ interface FieldDef {
   key: SettingKey;
   label: string;
   help: string;
-  kind: 'number' | 'time' | 'text' | 'textarea';
+  kind: 'number' | 'text' | 'textarea';
   min?: number;
   max?: number;
   maxLength?: number;
@@ -28,7 +28,6 @@ const FIELDS: FieldDef[] = [
     min: 500,
     max: 3400,
   },
-  { key: 'default_service_time', label: 'Horário padrão do culto', help: 'Sugerido ao criar uma escala.', kind: 'time' },
   {
     key: 'default_deadline_hours',
     label: 'Prazo padrão de entrega (horas após o culto)',

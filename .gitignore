@@ -40,3 +40,13 @@ desktop.ini
 .phpunit.cache/
 .phpactor.json
 _ide_helper.php
+
+# Configuração local de ferramentas de IA (skills, MCP, agentes)
+.agents/
+.claude/
+.pi/
+.grok/
+.mcp.json
+boost.json
+opencode.json
+skills-lock.json

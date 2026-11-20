@@ -25,6 +25,9 @@ php artisan migrate --force
 echo "Executando seeders de usuários e unidades..."
 php artisan db:seed --force || true
 
+echo "Iniciando agendador de tarefas (verificação de prazos das escalas)..."
+php artisan schedule:work > /dev/null 2>&1 &
+
 echo "=== Servidor Laravel 13 pronto! Iniciando escuta na porta 8000 ==="
 exec php artisan serve --host=0.0.0.0 --port=8000
 

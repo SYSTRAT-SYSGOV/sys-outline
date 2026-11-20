@@ -10,6 +10,7 @@ import {
 import { checkSpelling, applySuggestion, SpellError } from '../lib/spellchecker';
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
 import { useSettings } from '../context/SettingsContext';
+import { ReviewComments } from './ReviewComments';
 import { SheetPreview } from './SheetPreview';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -758,6 +759,8 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
           approvedAt={sermon.approved_at}
           distributedAt={sermon.distributed_at}
         />
+
+        {sermon.id !== undefined && <ReviewComments sermonId={sermon.id} />}
 
         {/* Painel de Apontamentos do Revisor (quando DEVOLVIDO/REJEITADO) */}
         {sermon.status === 'rejected' && (

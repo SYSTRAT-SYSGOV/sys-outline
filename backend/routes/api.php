@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DutyScheduleController;
 use App\Http\Controllers\Api\OrganizationController;
+use App\Http\Controllers\Api\ReviewCommentController;
 use App\Http\Controllers\Api\SermonSummaryController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\UserController;
@@ -73,6 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sermons/{sermonSummary}', [SermonSummaryController::class, 'show']);
     Route::put('/sermons/{sermonSummary}', [SermonSummaryController::class, 'update']);
     Route::get('/sermons/{sermonSummary}/changes', [SermonSummaryController::class, 'changes']);
+    Route::get('/sermons/{sermonSummary}/comments', [ReviewCommentController::class, 'index']);
+    Route::post('/sermons/{sermonSummary}/comments', [ReviewCommentController::class, 'store']);
+    Route::put('/review-comments/{reviewComment}/resolve', [ReviewCommentController::class, 'toggleResolved']);
     Route::put('/sermons/{sermonSummary}/announcements', [SermonSummaryController::class, 'updateAnnouncements']);
     Route::post('/sermons/{sermonSummary}/submit', [SermonSummaryController::class, 'submitForReview']);
 

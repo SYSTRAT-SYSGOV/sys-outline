@@ -101,6 +101,18 @@ class SermonSummaryPolicy
             && ! Announcements::isEmpty($summary->announcements);
     }
 
+    public function comment(User $user, SermonSummary $summary): bool
+    {
+        return $this->reviewAction($user, $summary)
+            && in_array($summary->status, ['submitted', 'in_review'], true);
+    }
+
+    public function resolveComment(User $user, SermonSummary $summary): bool
+    {
+        return $this->reviewAction($user, $summary)
+            || ($user->isScribe() && $summary->scribe_user_id === $user->id);
+    }
+
     private function reviewAction(User $user, SermonSummary $summary): bool
     {
         if (! $this->canAccess($user, $summary)) {

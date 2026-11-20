@@ -210,6 +210,11 @@ class SermonSummary extends Model
         return $this->hasMany(WeeklyAgendaItem::class)->orderBy('order_index');
     }
 
+    public function reviewComments(): HasMany
+    {
+        return $this->hasMany(ReviewComment::class)->oldest();
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(ReviewAuditLog::class)->latest();

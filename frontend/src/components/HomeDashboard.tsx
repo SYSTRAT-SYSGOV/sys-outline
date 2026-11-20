@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { StatsOverview } from './StatsOverview';
 import { PunctualityCard } from './PunctualityCard';
+import { RecentSwapsCard } from './RecentSwapsCard';
 import type { TabKey } from './AppLayout';
 
 interface MySchedule {
@@ -102,6 +103,7 @@ export const HomeDashboard: React.FC<{ onNavigate: (tab: TabKey) => void }> = ({
 
       {isManager && <StatsOverview onNavigateToTab={tab => onNavigate(tab as TabKey)} />}
 
+      {(role === 'admin' || role === 'unit_admin') && <RecentSwapsCard />}
       {(role === 'admin' || role === 'unit_admin') && <PunctualityCard />}
     </div>
   );

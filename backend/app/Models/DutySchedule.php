@@ -15,6 +15,8 @@ class DutySchedule extends Model
         'organization_id',
         'scribe_user_id',
         'substitute_user_id',
+        'swapped_from_user_id',
+        'swapped_at',
         'service_date',
         'service_time',
         'deadline_at',
@@ -27,6 +29,7 @@ class DutySchedule extends Model
         return [
             'service_date' => 'date',
             'deadline_at' => 'datetime',
+            'swapped_at' => 'datetime',
         ];
     }
 
@@ -38,6 +41,11 @@ class DutySchedule extends Model
     public function scribe(): BelongsTo
     {
         return $this->belongsTo(User::class, 'scribe_user_id');
+    }
+
+    public function swappedFrom(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'swapped_from_user_id');
     }
 
     public function substitute(): BelongsTo

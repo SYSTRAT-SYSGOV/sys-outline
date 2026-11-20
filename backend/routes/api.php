@@ -57,6 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/schedules', [DutyScheduleController::class, 'index']);
     Route::get('/schedules/my', [DutyScheduleController::class, 'mySchedules']);
     Route::get('/schedules/{dutySchedule}', [DutyScheduleController::class, 'show']);
+    Route::get('/schedules/{dutySchedule}/swap-candidates', [DutyScheduleController::class, 'swapCandidates']);
+    Route::post('/schedules/{dutySchedule}/swap', [DutyScheduleController::class, 'swap']);
     Route::middleware('role:admin,unit_admin')->group(function () {
         Route::post('/schedules', [DutyScheduleController::class, 'store']);
         Route::put('/schedules/{dutySchedule}', [DutyScheduleController::class, 'update']);

@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { useSettings } from '../context/SettingsContext';
+import { SwapScheduleDialog } from './SwapScheduleDialog';
 import {
   Calendar,
   Clock,
@@ -29,6 +30,8 @@ export interface DutyScheduleItem {
   organization?: { id: number; name: string; type: string };
   scribe?: { id: number; name: string; email: string };
   substitute?: { id: number; name: string; email: string } | null;
+  swapped_from?: { id: number; name: string } | null;
+  swapped_at?: string | null;
   sermon_summary?: { id: number; status: string; title_theme: string } | null;
 }
 
@@ -72,6 +75,7 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
   const [shift, setShift] = useState<'manha' | 'noite' | 'integral'>('manha');
   const [deadlineAt, setDeadlineAt] = useState('');
   const [deadlineEdited, setDeadlineEdited] = useState(false);
+  const [swapScheduleId, setSwapScheduleId] = useState<number | null>(null);
   const { settings } = useSettings();
 
   /** Prazo sugerido: horário do turno + prazo padrão (horas) das configurações. */
@@ -283,6 +287,9 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
       render: sch => (
         <div>
           <div className="font-medium text-foreground">{sch.scribe?.name || 'Não atribuído'}</div>
+          {sch.swapped_from && (
+            <div className="text-[11px] text-muted-foreground">Passada por {sch.swapped_from.name}</div>
+          )}
           {sch.substitute && (
             <div className="text-[11px] text-muted-foreground">Suplente: {sch.substitute.name}</div>
           )}
@@ -341,6 +348,12 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
       className: 'text-right min-w-[150px]',
       render: sch => (
         <div className="flex items-center justify-end gap-1.5">
+          {['scheduled', 'delayed'].includes(sch.status) &&
+            (sch.user_id === user?.id || user?.role === 'admin' || user?.role === 'unit_admin') && (
+              <Button size="sm" variant="outline" onClick={() => setSwapScheduleId(sch.id)} className="h-8 px-3 text-xs">
+                Passar escala
+              </Button>
+            )}
           {onSelectScheduleForWriting && (
             <Button
               size="sm"
@@ -374,6 +387,15 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
           <span>{toastMessage}</span>
         </div>
       )}
+
+      <SwapScheduleDialog
+        scheduleId={swapScheduleId}
+        onClose={() => setSwapScheduleId(null)}
+        onSwapped={() => {
+          showToast('Escala passada com sucesso!', 'success');
+          loadSchedules();
+        }}
+      />
 
       {/* Header e Ações */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

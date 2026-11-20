@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DutySchedule;
+use App\Models\SermonSummary;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class DutyScheduleController extends Controller
@@ -17,7 +20,7 @@ class DutyScheduleController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = DutySchedule::with(['organization', 'scribe', 'substitute', 'summary']);
+        $query = DutySchedule::with(['organization', 'scribe', 'substitute', 'swappedFrom', 'summary']);
 
         // Segregação por organização para quem não é admin
         if (! $user->isAdmin()) {
@@ -65,7 +68,7 @@ class DutyScheduleController extends Controller
     {
         $user = $request->user();
 
-        $schedules = DutySchedule::with(['organization', 'substitute', 'summary'])
+        $schedules = DutySchedule::with(['organization', 'substitute', 'swappedFrom', 'summary'])
             ->where(function ($q) use ($user) {
                 $q->where('scribe_user_id', $user->id)
                     ->orWhere('substitute_user_id', $user->id);
@@ -242,5 +245,79 @@ class DutyScheduleController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Colegas da mesma unidade que podem assumir a escala (sem conflito de dia e horário).
+     */
+    public function swapCandidates(Request $request, DutySchedule $dutySchedule): JsonResponse
+    {
+        $this->ensureCanSwap($request->user(), $dutySchedule);
+
+        return response()->json(['data' => $this->availableColleagues($dutySchedule)]);
+    }
+
+    /**
+     * Passa a escala para um colega da unidade; vale na hora, sem aprovação.
+     */
+    public function swap(Request $request, DutySchedule $dutySchedule): JsonResponse
+    {
+        $this->ensureCanSwap($request->user(), $dutySchedule);
+
+        $data = $request->validate(['scribe_user_id' => 'required|integer']);
+        $newScribeId = (int) $data['scribe_user_id'];
+
+        if (! $this->availableColleagues($dutySchedule)->contains('id', $newScribeId)) {
+            throw ValidationException::withMessages([
+                'scribe_user_id' => ['Este colega não está disponível para assumir a escala.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($dutySchedule, $newScribeId) {
+            $previousScribeId = $dutySchedule->scribe_user_id;
+
+            $dutySchedule->update([
+                'scribe_user_id' => $newScribeId,
+                'substitute_user_id' => $dutySchedule->substitute_user_id === $newScribeId ? null : $dutySchedule->substitute_user_id,
+                'swapped_from_user_id' => $previousScribeId,
+                'swapped_at' => now(),
+            ]);
+
+            // O novo escriba passa a poder escrever o resumo já iniciado.
+            SermonSummary::where('duty_schedule_id', $dutySchedule->id)
+                ->whereIn('status', ['draft', 'rejected'])
+                ->update(['scribe_user_id' => $newScribeId]);
+        });
+
+        return response()->json([
+            'message' => 'Escala passada com sucesso.',
+            'data' => $dutySchedule->fresh()->load(['organization', 'scribe', 'substitute', 'swappedFrom']),
+        ]);
+    }
+
+    private function ensureCanSwap(User $user, DutySchedule $schedule): void
+    {
+        abort_unless($user->canAccessOrganization($schedule->organization_id), 404);
+        abort_unless($user->isAdmin() || $user->isUnitAdmin() || $schedule->scribe_user_id === $user->id, 403, 'Apenas o escriba da escala ou a coordenação podem passá-la.');
+        abort_unless(in_array($schedule->status, ['pending', 'delayed'], true), 422, 'Esta escala não pode mais ser passada.');
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function availableColleagues(DutySchedule $schedule): Collection
+    {
+        $busy = DutySchedule::whereDate('service_date', $schedule->service_date)
+            ->where('service_time', $schedule->service_time)
+            ->get(['scribe_user_id', 'substitute_user_id'])
+            ->flatMap(fn (DutySchedule $s) => [$s->scribe_user_id, $s->substitute_user_id])
+            ->filter();
+
+        return User::where('organization_id', $schedule->organization_id)
+            ->where('role', 'scribe')
+            ->where('active', true)
+            ->whereNotIn('id', $busy)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 }

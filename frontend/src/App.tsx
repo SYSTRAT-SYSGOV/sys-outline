@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { Login } from './pages/Login';
 import { AppLayout, TabKey } from './components/AppLayout';
 import { SermonEditor } from './components/SermonEditor';
@@ -8,6 +9,7 @@ import { DutyRoster, DutyScheduleItem } from './components/DutyRoster';
 import { OrganizationsManager } from './components/OrganizationsManager';
 import { SermonsLibrary } from './components/SermonsLibrary';
 import { UsersManager } from './components/UsersManager';
+import { SettingsManager } from './components/SettingsManager';
 import { PublicSermon } from './pages/PublicSermon';
 import { A4PreviewModal } from './components/A4PreviewModal';
 import { StatsOverview } from './components/StatsOverview';
@@ -136,6 +138,10 @@ function AppContent() {
         <UsersManager />
       )}
 
+      {currentTab === 'settings' && ['admin', 'unit_admin'].includes(user.role) && (
+        <SettingsManager />
+      )}
+
       {/* Modal Global de Pré-visualização A4 */}
       <A4PreviewModal
         isOpen={globalPreviewOpen}
@@ -151,7 +157,9 @@ export default function App() {
     <ErrorBoundary>
       <TooltipProvider>
         <AuthProvider>
-          <AppContent />
+          <SettingsProvider>
+            <AppContent />
+          </SettingsProvider>
           <Toaster richColors position="top-right" />
         </AuthProvider>
       </TooltipProvider>

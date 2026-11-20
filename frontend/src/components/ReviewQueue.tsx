@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { SermonData } from '../lib/sermonUtils';
 import { SermonEditor } from './SermonEditor';
 import { DataTable, ColumnDef, DataTableFilter } from './DataTable';
@@ -28,6 +29,9 @@ import {
 
 export const ReviewQueue: React.FC = () => {
   const { user } = useAuth();
+  const { settings } = useSettings();
+  const limite = settings.summary_char_limit;
+  const limiteTexto = limite.toLocaleString('pt-BR');
   const [sermons, setSermons] = useState<SermonData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSermon, setSelectedSermon] = useState<SermonData | null>(null);
@@ -249,10 +253,10 @@ export const ReviewQueue: React.FC = () => {
       className: 'font-mono text-xs text-right whitespace-nowrap',
       render: s => {
         const chars = s.summary_text?.length || 0;
-        const isExceeded = chars > 3400;
+        const isExceeded = chars > limite;
         return (
           <span className={`font-semibold ${isExceeded ? 'text-critical' : 'text-success-strong'}`}>
-            {chars.toLocaleString('pt-BR')} / 3.400
+            {chars.toLocaleString('pt-BR')} / {limiteTexto}
           </span>
         );
       },
@@ -502,7 +506,7 @@ export const ReviewQueue: React.FC = () => {
                 {checklist.a4Fit ? <CheckSquare className="size-4 text-success shrink-0 mt-0.5" /> : <Square className="size-4 text-muted-foreground shrink-0 mt-0.5" />}
                 <div>
                   <div className="font-semibold text-foreground">4. Enquadramento A4</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">Dentro do limite de folha única (≤ 3.400)</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Dentro do limite de folha única (≤ {limiteTexto})</div>
                 </div>
               </button>
             </div>

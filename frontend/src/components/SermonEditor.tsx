@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   SermonData,
-  LIMITE_RESUMO,
   countVisibleChars,
   AnnouncementItem,
   announcementsFromAgenda,
@@ -10,6 +9,7 @@ import {
 } from '../lib/sermonUtils';
 import { checkSpelling, applySuggestion, SpellError } from '../lib/spellchecker';
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
+import { useSettings } from '../context/SettingsContext';
 import { SheetPreview } from './SheetPreview';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -62,6 +62,9 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   readOnly = false,
 }) => {
   const { user } = useAuth();
+  const { settings } = useSettings();
+  const limite = settings.summary_char_limit;
+  const limiteTexto = limite.toLocaleString('pt-BR');
   const summaryTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [sermon, setSermon] = useState<SermonData>(() => {
@@ -121,9 +124,9 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
   // Character calculation
   const charCount = countVisibleChars(sermon.summary_text);
-  const charPercent = Math.min(100, (charCount / LIMITE_RESUMO) * 100);
-  const isOverLimit = charCount > LIMITE_RESUMO;
-  const isWarning = charCount >= LIMITE_RESUMO * 0.9 && !isOverLimit;
+  const charPercent = Math.min(100, (charCount / limite) * 100);
+  const isOverLimit = charCount > limite;
+  const isWarning = charCount >= limite * 0.9 && !isOverLimit;
 
   const canCoordinate = ['admin', 'unit_admin', 'reviewer'].includes(user?.role || '');
   const isApproved = sermon.status === 'approved';
@@ -471,7 +474,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   const handleSubmitForReview = async () => {
     if (isOverLimit) {
       showToast(
-        `O resumo excedeu o limite máximo de ${LIMITE_RESUMO} caracteres. Reduza o texto antes de submeter.`,
+        `O resumo excedeu o limite máximo de ${limite} caracteres. Reduza o texto antes de submeter.`,
         'error'
       );
       return;
@@ -591,7 +594,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
   };
 
   const handleCopyWhatsApp = async () => {
-    const success = await copySermonToClipboard(sermon);
+    const success = await copySermonToClipboard(sermon, settings.whatsapp_footer);
     if (success) {
       showToast('Roteiro formatado copiado para a área de transferência!', 'success');
     } else {
@@ -785,7 +788,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
               <span className="text-[11px] text-muted-foreground">
-                Dica: O contador de caracteres abaixo indica o limite estrito de 3.400 caracteres da página única A4.
+                Dica: O contador de caracteres abaixo indica o limite estrito de {limiteTexto} caracteres da página única A4.
               </span>
               <Button
                 size="sm"
@@ -889,7 +892,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                     : 'bg-success-surface text-success-strong border border-success-border'
                   }`}
               >
-                {charCount.toLocaleString('pt-BR')} / 3.400 caracteres
+                {charCount.toLocaleString('pt-BR')} / {limiteTexto} caracteres
               </span>
               <span className="text-[11px] text-muted-foreground hidden sm:inline">
                 {isOverLimit ? '⚠️ Excede limite de 1 folha A4' : '✓ Enquadrado em folha única A4'}
@@ -1168,10 +1171,10 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 >
                   <span>{charCount.toLocaleString('pt-BR')}</span>
                   <span>/</span>
-                  <span>{LIMITE_RESUMO.toLocaleString('pt-BR')}</span>
+                  <span>{limiteTexto}</span>
                   {isOverLimit && (
                     <span className="text-critical font-bold">
-                      (+{(charCount - LIMITE_RESUMO).toLocaleString('pt-BR')})
+                      (+{(charCount - limite).toLocaleString('pt-BR')})
                     </span>
                   )}
                 </div>
@@ -1302,7 +1305,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
                 )}
               />
 
-              {/* Barra de Progresso do Limite de 3.400 caracteres */}
+              {/* Barra de Progresso do Limite de caracteres */}
               <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-1.5">
                 <div
                   className={cn(
@@ -1317,7 +1320,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
               {isOverLimit && (
                 <p className="text-xs text-critical font-medium mt-1 flex items-center gap-1">
                   <AlertTriangle className="size-3.5 shrink-0" />
-                  Limite de 3.400 caracteres excedido. O resumo não caberá em 1 folha A4.
+                  Limite de {limiteTexto} caracteres excedido. O resumo não caberá em 1 folha A4.
                 </p>
               )}
 
@@ -1481,7 +1484,7 @@ export const SermonEditor: React.FC<SermonEditorProps> = ({
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Contador de caracteres:</span>
               <span className={cn("font-mono font-bold", isOverLimit ? "text-critical" : "text-success-strong")}>
-                {charCount.toLocaleString('pt-BR')} / 3.400
+                {charCount.toLocaleString('pt-BR')} / {limiteTexto}
               </span>
             </div>
 

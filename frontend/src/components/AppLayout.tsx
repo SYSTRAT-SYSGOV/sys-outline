@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   Users,
+  Settings,
   Menu,
   Church,
   CalendarDays,
@@ -39,7 +40,7 @@ import {
   cn,
 } from '@sysgov/ui';
 
-export type TabKey = 'editor' | 'schedules' | 'review' | 'sermons' | 'organizations' | 'users';
+export type TabKey = 'editor' | 'schedules' | 'review' | 'sermons' | 'organizations' | 'users' | 'settings';
 
 interface NavItem {
   key: TabKey;
@@ -178,6 +179,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           shortcut: 'U',
           roles: ['admin', 'unit_admin'],
         },
+        {
+          key: 'settings',
+          label: 'Configurações',
+          icon: Settings,
+          shortcut: 'C',
+          roles: ['admin', 'unit_admin'],
+        },
       ],
     },
   ];
@@ -209,6 +217,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         b: 'sermons',
         i: 'organizations',
         u: 'users',
+        c: 'settings',
       };
 
       if (map[key]) {
@@ -217,6 +226,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         if (tab === 'review' && !['admin', 'unit_admin', 'reviewer'].includes(user?.role ?? '')) return;
         if (tab === 'organizations' && !['admin', 'unit_admin'].includes(user?.role ?? '')) return;
         if (tab === 'users' && !['admin', 'unit_admin'].includes(user?.role ?? '')) return;
+        if (tab === 'settings' && !['admin', 'unit_admin'].includes(user?.role ?? '')) return;
 
         e.preventDefault();
         setMobileOpen(false);
@@ -252,6 +262,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     users: {
       title: 'Voluntários & Equipe',
       subtitle: 'Controle de voluntários escribas, revisores e administradores',
+    },
+    settings: {
+      title: 'Configurações',
+      subtitle: 'Parâmetros do sistema e personalização por igreja ou núcleo',
     },
   };
 

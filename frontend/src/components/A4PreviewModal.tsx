@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { SermonData, formatAuthHash, generateClientAuthHash, hasAnnouncementContent } from '../lib/sermonUtils';
 import { SheetPreview } from './SheetPreview';
+import { useSettings } from '../context/SettingsContext';
 import { Button } from './ui/button';
 import { Printer, X, ZoomIn, ZoomOut, RotateCcw, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export const A4PreviewModal: React.FC<A4PreviewModalProps> = ({
   sermon,
   onPreviewed,
 }) => {
+  const { settings } = useSettings();
   const [scale, setScale] = useState<number>(0.9);
   const [isOverflowing, setIsOverflowing] = useState<boolean>(false);
   const [currentHeight, setCurrentHeight] = useState<number>(0);
@@ -151,10 +153,10 @@ export const A4PreviewModal: React.FC<A4PreviewModalProps> = ({
             <div>
               Caracteres no Resumo:{' '}
               <span
-                className={`font-bold ${charCount > 3400 ? 'text-red-400' : 'text-emerald-400'
+                className={`font-bold ${charCount > settings.summary_char_limit ? 'text-red-400' : 'text-emerald-400'
                   }`}
               >
-                {charCount.toLocaleString('pt-BR')} / 3.400
+                {charCount.toLocaleString('pt-BR')} / {settings.summary_char_limit.toLocaleString('pt-BR')}
               </span>
             </div>
             <div>

@@ -1,6 +1,6 @@
 import { SermonData, formatDateExtenso } from './sermonUtils';
 
-export function formatSermonForWhatsApp(sermon: SermonData): string {
+export function formatSermonForWhatsApp(sermon: SermonData, footer = ''): string {
   const lines: string[] = [];
 
   lines.push('📖 *MENSAGEM PARA CÉLULAS*');
@@ -49,11 +49,16 @@ export function formatSermonForWhatsApp(sermon: SermonData): string {
     });
   }
 
+  if (footer.trim()) {
+    lines.push('');
+    lines.push(footer.trim());
+  }
+
   return lines.join('\n');
 }
 
-export function copySermonToClipboard(sermon: SermonData): Promise<boolean> {
-  const text = formatSermonForWhatsApp(sermon);
+export function copySermonToClipboard(sermon: SermonData, footer = ''): Promise<boolean> {
+  const text = formatSermonForWhatsApp(sermon, footer);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
   } else {

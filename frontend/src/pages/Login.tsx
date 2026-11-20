@@ -195,7 +195,8 @@ export const Login: React.FC = () => {
               </p>
             </form>
 
-            {/* Acesso rápido para demonstração */}
+            {/* Acesso rápido: apenas em desenvolvimento local */}
+            {import.meta.env.DEV && (
             <div className="mt-6 space-y-2.5 border-t border-white/10 pt-5">
               <span className="block text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Acesso Rápido para Demonstração
@@ -233,6 +234,7 @@ export const Login: React.FC = () => {
                 Senha padrão: <span className="font-bold text-slate-200">password123</span>
               </p>
             </div>
+            )}
           </Card>
 
           <p className="mt-5 text-center text-[11px] font-medium text-white/80 drop-shadow-sm">

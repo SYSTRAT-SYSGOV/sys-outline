@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import {
   SermonData,
   SAMPLE_SERMON,
@@ -25,6 +26,7 @@ export const SheetPreview: React.FC<SheetPreviewProps> = ({
   scale = 1,
   template = 'modern',
 }) => {
+  const { settings } = useSettings();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [currentHeight, setCurrentHeight] = useState(0);
@@ -370,6 +372,12 @@ export const SheetPreview: React.FC<SheetPreviewProps> = ({
                   )}
                 </tbody>
               </table>
+
+              {settings.a4_footer_text && (
+                <div className="a4-footer-text mt-[0.8mm] text-center text-[7.5pt] leading-tight text-slate-600">
+                  {settings.a4_footer_text}
+                </div>
+              )}
 
               {/* 6. HASH DE AUTENTICAÇÃO DIGITAL INSTITUCIONAL (SYSGOV / SYSTRAT) */}
               <div className="auth-seal-bar mt-[0.8mm] pt-[0.6mm] flex items-center justify-between text-[6.5pt] font-mono text-slate-500 border-t border-slate-300">

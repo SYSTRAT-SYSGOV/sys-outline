@@ -88,7 +88,6 @@ export interface SermonData {
   }>;
 }
 
-export const LIMITE_RESUMO = 3400;
 export const MAX_ANNOUNCEMENTS = 8;
 export const A4_HEIGHT_PX = (297 * 96) / 25.4; // 1122.52 px
 

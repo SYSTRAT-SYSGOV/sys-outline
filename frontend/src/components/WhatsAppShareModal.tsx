@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SermonData } from '../lib/sermonUtils';
 import { formatSermonForWhatsApp } from '../lib/whatsappFormatter';
+import { useSettings } from '../context/SettingsContext';
 import { Button } from './ui/button';
 import { Share2, Copy, Check, X, ExternalLink } from 'lucide-react';
 
@@ -16,10 +17,11 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
   sermon,
 }) => {
   const [copied, setCopied] = useState(false);
+  const { settings } = useSettings();
 
   if (!isOpen || !sermon) return null;
 
-  const text = formatSermonForWhatsApp(sermon);
+  const text = formatSermonForWhatsApp(sermon, settings.whatsapp_footer);
 
   const handleCopy = async () => {
     try {

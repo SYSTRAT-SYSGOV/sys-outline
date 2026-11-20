@@ -4,6 +4,7 @@ import { SermonData } from '../lib/sermonUtils';
 import { DataTable, ColumnDef } from './DataTable';
 import { A4PreviewModal } from './A4PreviewModal';
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
+import { useSettings } from '../context/SettingsContext';
 import { Button } from './ui/button';
 import {
   BookOpen,
@@ -19,6 +20,7 @@ interface SermonsLibraryProps {
 }
 
 export const SermonsLibrary: React.FC<SermonsLibraryProps> = ({ onSelectForEdit: _onSelectForEdit }) => {
+  const { settings } = useSettings();
   
   const [sermons, setSermons] = useState<SermonData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export const SermonsLibrary: React.FC<SermonsLibraryProps> = ({ onSelectForEdit:
   }, [loadSermons]);
 
   const handleCopy = async (sermon: SermonData) => {
-    const ok = await copySermonToClipboard(sermon);
+    const ok = await copySermonToClipboard(sermon, settings.whatsapp_footer);
     if (ok) {
       showToast('Roteiro da ministração copiado para o WhatsApp!');
     }

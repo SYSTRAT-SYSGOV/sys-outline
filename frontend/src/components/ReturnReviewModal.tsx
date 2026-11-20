@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,8 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
   sermonId,
   mode = 'reject',
 }) => {
+  const { settings } = useSettings();
+  const limiteTexto = settings.summary_char_limit.toLocaleString('pt-BR');
   const isReopen = mode === 'reopen';
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +38,7 @@ export const ReturnReviewModal: React.FC<ReturnReviewModalProps> = ({
 
   const quickCategories = [
     { label: 'Ortografia / Concordância pt-BR', note: 'Ajustar ortografia, pontuação e concordância verbal no texto da pregação.' },
-    { label: 'Enquadramento A4 (>3.400 chars)', note: 'O resumo ultrapassou o teto de 3.400 caracteres. Reduza o texto para caber em folha única A4.' },
+    { label: `Enquadramento A4 (>${limiteTexto} chars)`, note: `O resumo ultrapassou o teto de ${limiteTexto} caracteres. Reduza o texto para caber em folha única A4.` },
     { label: 'Agenda & Avisos da Semana', note: 'Atualizar os dias, horários e eventos da agenda dominical da igreja.' },
     { label: 'Direcionamento & Orientações', note: 'Completar o direcionamento para as células e as orientações aos líderes.' },
     { label: 'Perguntas de Compartilhamento', note: 'Formular ou refinar as perguntas práticas para o momento da célula.' },

@@ -119,4 +119,38 @@ class SermonWorkflowTest extends TestCase
 
         $this->assertEquals('approved', $summary->fresh()->status);
     }
+
+    public function test_changes_endpoint_compares_the_current_submission_with_the_previous_one(): void
+    {
+        $scribe = User::where('email', 'escriba@escriba.com')->firstOrFail();
+        $catedral = Organization::where('slug', 'catedral')->firstOrFail();
+        $token = $scribe->createToken('test')->plainTextToken;
+
+        $id = $this->withToken($token)->postJson('/api/sermons', [
+            'organization_id' => $catedral->id,
+            'theme' => 'Tema de Teste',
+            'minister_title' => 'pelo',
+            'minister_name' => 'Pastor Lucas',
+            'service_date' => '2026-11-01',
+            'cell_direction' => 'Louvor e oração',
+            'leader_guidelines' => 'Avisos da semana',
+            'scripture_text' => 'Salmos 23:1',
+            'summary_text' => 'Primeira versão do resumo.',
+        ])->assertCreated()->json('data.id');
+
+        $this->withToken($token)->getJson("/api/sermons/{$id}/changes")
+            ->assertOk()
+            ->assertJsonPath('data.current', null)
+            ->assertJsonPath('data.previous', null);
+
+        $this->withToken($token)->postJson("/api/sermons/{$id}/submit")->assertOk();
+        SermonSummary::whereKey($id)->update(['status' => 'rejected']);
+        $this->withToken($token)->putJson("/api/sermons/{$id}", ['summary_text' => 'Segunda versão do resumo.'])->assertOk();
+        $this->withToken($token)->postJson("/api/sermons/{$id}/submit")->assertOk();
+
+        $this->withToken($token)->getJson("/api/sermons/{$id}/changes")
+            ->assertOk()
+            ->assertJsonPath('data.previous.summary_text', 'Primeira versão do resumo.')
+            ->assertJsonPath('data.current.summary_text', 'Segunda versão do resumo.');
+    }
 }

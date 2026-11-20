@@ -410,6 +410,7 @@ class SermonSummaryController extends Controller
                 'user_id' => $user->id,
                 'action' => $validated['status'] === 'submitted' ? 'submitted' : 'created_draft',
                 'feedback_notes' => $validated['status'] === 'submitted' ? 'Resumo submetido diretamente.' : 'Rascunho inicial criado.',
+                'metadata' => $validated['status'] === 'submitted' ? ['snapshot' => $this->contentSnapshot($summary)] : null,
             ]);
 
             if ($usedInheritance && $inheritance['source_id']) {
@@ -720,6 +721,7 @@ class SermonSummaryController extends Controller
             'user_id' => $user->id,
             'action' => 'submitted',
             'feedback_notes' => 'Resumo submetido pelo escriba para a fila de revisão.',
+            'metadata' => ['snapshot' => $this->contentSnapshot($sermonSummary)],
         ]);
 
         return response()->json([
@@ -985,6 +987,37 @@ class SermonSummaryController extends Controller
     /**
      * Visualização pública de uma mensagem aprovada para líderes de célula.
      */
+    /**
+     * Cópia do conteúdo guardada a cada envio para revisão.
+     *
+     * @return array<string, mixed>
+     */
+    private function contentSnapshot(SermonSummary $summary): array
+    {
+        return $summary->only(['theme', 'minister_name', 'scripture_text', 'cell_direction', 'leader_guidelines', 'summary_text']);
+    }
+
+    /**
+     * Compara o envio atual com o envio anterior para o revisor ver o que mudou.
+     */
+    public function changes(SermonSummary $sermonSummary): JsonResponse
+    {
+        $this->authorize('view', $sermonSummary);
+
+        $submissions = $sermonSummary->auditLogs()
+            ->where('action', 'submitted')
+            ->whereNotNull('metadata')
+            ->latest('id')
+            ->take(2)
+            ->get();
+
+        return response()->json(['data' => [
+            'current' => $submissions[0]->metadata['snapshot'] ?? null,
+            'previous' => $submissions[1]->metadata['snapshot'] ?? null,
+            'previous_submitted_at' => $submissions[1]->created_at ?? null,
+        ]]);
+    }
+
     /**
      * Limite de caracteres efetivo da unidade (configuração com herança).
      */

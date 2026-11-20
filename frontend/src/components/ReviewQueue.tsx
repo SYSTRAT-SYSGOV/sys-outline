@@ -9,6 +9,7 @@ import { A4PreviewModal } from './A4PreviewModal';
 import { ReturnReviewModal } from './ReturnReviewModal';
 import { ApprovalSuccessModal } from './ApprovalSuccessModal';
 import { ReviewWorkflowStepper } from './ReviewWorkflowStepper';
+import { SubmissionChanges } from './SubmissionChanges';
 import { WhatsAppShareModal } from './WhatsAppShareModal';
 import { Button, Badge } from '@sysgov/ui';
 import {
@@ -426,6 +427,8 @@ export const ReviewQueue: React.FC = () => {
             rejectionReason={selectedSermon.rejection_reason}
             reviewerName={selectedSermon.reviewer?.name || user?.name}
           />
+
+          {selectedSermon.id !== undefined && <SubmissionChanges sermonId={selectedSermon.id} />}
 
           {/* Card de Auditoria & Checklist de Homologação do Revisor */}
           <div className="bg-card rounded-xl p-5 border border-border shadow-xs space-y-4">

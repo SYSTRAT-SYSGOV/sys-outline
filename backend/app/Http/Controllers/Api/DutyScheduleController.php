@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DutySchedule;
 use App\Models\SermonSummary;
 use App\Models\User;
+use App\Notifications\ScheduleReceived;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -289,9 +290,17 @@ class DutyScheduleController extends Controller
                 ->update(['scribe_user_id' => $newScribeId]);
         });
 
+        $dutySchedule = $dutySchedule->fresh()->load(['organization', 'scribe', 'substitute', 'swappedFrom']);
+
+        try {
+            $dutySchedule->scribe->notify(new ScheduleReceived($dutySchedule, $dutySchedule->swappedFrom));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return response()->json([
             'message' => 'Escala passada com sucesso.',
-            'data' => $dutySchedule->fresh()->load(['organization', 'scribe', 'substitute', 'swappedFrom']),
+            'data' => $dutySchedule,
         ]);
     }
 

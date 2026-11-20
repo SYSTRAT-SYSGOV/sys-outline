@@ -17,6 +17,7 @@ class DutySchedule extends Model
         'substitute_user_id',
         'swapped_from_user_id',
         'swapped_at',
+        'reminded_at',
         'service_date',
         'service_time',
         'deadline_at',
@@ -30,6 +31,7 @@ class DutySchedule extends Model
             'service_date' => 'date',
             'deadline_at' => 'datetime',
             'swapped_at' => 'datetime',
+            'reminded_at' => 'datetime',
         ];
     }
 

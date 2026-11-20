@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 // Marca como atrasadas as escalas pendentes com prazo vencido.
 Schedule::command('duties:check-deadlines')->hourly()->withoutOverlapping();
+Schedule::command('duties:send-reminders')->hourly()->withoutOverlapping();

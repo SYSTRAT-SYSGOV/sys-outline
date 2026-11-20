@@ -59,4 +59,41 @@ class DashboardController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Pontualidade por escriba: entregas no prazo x atrasadas nos últimos dias.
+     */
+    public function punctuality(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $days = min(365, max(7, $request->integer('days', 90)));
+
+        $schedules = DutySchedule::with([
+            'scribe:id,name',
+            'summary.auditLogs' => fn ($q) => $q->where('action', 'submitted'),
+        ])
+            ->whereDate('service_date', '>=', now()->subDays($days))
+            ->where('deadline_at', '<', now())
+            ->when(! $user->isAdmin(), fn ($q) => $q->where('organization_id', $user->organization_id))
+            ->get();
+
+        $rows = $schedules->groupBy('scribe_user_id')->map(function ($group) {
+            $onTime = $group->filter(function (DutySchedule $schedule) {
+                $submittedAt = $schedule->summary?->auditLogs->min('created_at');
+
+                return $submittedAt !== null && $submittedAt <= $schedule->deadline_at;
+            })->count();
+
+            return [
+                'scribe_id' => $group->first()->scribe_user_id,
+                'scribe_name' => $group->first()->scribe?->name,
+                'total' => $group->count(),
+                'on_time' => $onTime,
+                'late' => $group->count() - $onTime,
+                'rate' => round($onTime / $group->count() * 100),
+            ];
+        })->sortBy('rate')->values();
+
+        return response()->json(['data' => ['days' => $days, 'scribes' => $rows]]);
+    }
 }

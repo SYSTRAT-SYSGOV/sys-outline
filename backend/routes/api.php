@@ -25,6 +25,7 @@ Route::get('/sermons/public/{sermonSummary}', [SermonSummaryController::class, '
 Route::middleware('auth:sanctum')->group(function () {
     // Dashboard & Métricas Operacionais
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/dashboard/punctuality', [DashboardController::class, 'punctuality'])->middleware('role:admin,unit_admin');
 
     // Autenticação & Perfil
     Route::get('/me', [AuthController::class, 'me']);

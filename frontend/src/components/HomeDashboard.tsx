@@ -5,6 +5,7 @@ import { Button, Badge } from '@sysgov/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { StatsOverview } from './StatsOverview';
+import { PunctualityCard } from './PunctualityCard';
 import type { TabKey } from './AppLayout';
 
 interface MySchedule {
@@ -100,6 +101,8 @@ export const HomeDashboard: React.FC<{ onNavigate: (tab: TabKey) => void }> = ({
       </nav>
 
       {isManager && <StatsOverview onNavigateToTab={tab => onNavigate(tab as TabKey)} />}
+
+      {(role === 'admin' || role === 'unit_admin') && <PunctualityCard />}
     </div>
   );
 };

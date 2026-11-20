@@ -217,6 +217,6 @@ class SermonSummary extends Model
 
     public function auditLogs(): HasMany
     {
-        return $this->hasMany(ReviewAuditLog::class)->latest();
+        return $this->hasMany(ReviewAuditLog::class)->latest()->latest('id');
     }
 }

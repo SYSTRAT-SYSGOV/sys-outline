@@ -153,4 +153,32 @@ class SermonWorkflowTest extends TestCase
             ->assertJsonPath('data.previous.summary_text', 'Primeira versão do resumo.')
             ->assertJsonPath('data.current.summary_text', 'Segunda versão do resumo.');
     }
+
+    public function test_audit_trail_keeps_insertion_order_when_events_share_the_same_second(): void
+    {
+        $scribe = User::where('email', 'escriba@escriba.com')->firstOrFail();
+        $summary = SermonSummary::create([
+            'organization_id' => Organization::where('slug', 'catedral')->value('id'),
+            'scribe_user_id' => $scribe->id,
+            'status' => 'draft',
+            'theme' => 'Tema',
+            'minister_title' => 'pelo',
+            'minister_name' => 'Pastor',
+            'service_date' => '2026-11-01',
+            'cell_direction' => 'Louvor',
+            'leader_guidelines' => 'Orientações',
+            'scripture_text' => 'Salmos 23:1',
+            'summary_text' => 'Resumo.',
+        ]);
+
+        foreach (['approved', 'distributed'] as $action) {
+            $summary->auditLogs()->create([
+                'user_id' => $scribe->id,
+                'action' => $action,
+                'created_at' => '2026-11-01 12:00:00',
+            ]);
+        }
+
+        $this->assertSame(['distributed', 'approved'], $summary->auditLogs()->pluck('action')->all());
+    }
 }

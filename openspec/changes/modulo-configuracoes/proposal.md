@@ -2,7 +2,7 @@
 
 ## Why
 
-Os parâmetros do sistema estão fixos no código: o teto de 3.400 caracteres aparece em pelo menos cinco componentes do frontend, e o administrador geral não tem onde definir padrões para toda a rede.
+Os parâmetros do sistema estão fixos no código: o teto de 3.400 caracteres aparece em pelo menos cinco componentes do frontend. Catedral e núcleos não conseguem ajustar nada sem alteração de código, e o administrador geral não tem onde definir padrões para toda a rede.
 
 ## What Changes
 

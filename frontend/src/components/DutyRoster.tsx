@@ -5,6 +5,7 @@ import { DataTable, ColumnDef, DataTableFilter } from './DataTable';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
+import { useSettings } from '../context/SettingsContext';
 import {
   Calendar,
   Clock,
@@ -70,6 +71,18 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
   const [serviceDate, setServiceDate] = useState('');
   const [shift, setShift] = useState<'manha' | 'noite' | 'integral'>('manha');
   const [deadlineAt, setDeadlineAt] = useState('');
+  const [deadlineEdited, setDeadlineEdited] = useState(false);
+  const { settings } = useSettings();
+
+  /** Prazo sugerido: horário do turno + prazo padrão (horas) das configurações. */
+  const suggestDeadline = (date: string, shiftValue: string) => {
+    if (!date) return '';
+    const time = shiftValue === 'manha' ? '09:00' : shiftValue === 'noite' ? '18:30' : '12:00';
+    const due = new Date(`${date}T${time}`);
+    due.setHours(due.getHours() + settings.default_deadline_hours);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}`;
+  };
   const [notes, setNotes] = useState('');
 
   // Toast
@@ -166,6 +179,7 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
   const resetForm = () => {
     setServiceDate('');
     setDeadlineAt('');
+    setDeadlineEdited(false);
     setScribeId('');
     setSubstituteId('');
     setNotes('');
@@ -466,7 +480,10 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
                   <Input
                     type="date"
                     value={serviceDate}
-                    onChange={e => setServiceDate(e.target.value)}
+                    onChange={e => {
+                      setServiceDate(e.target.value);
+                      if (!deadlineEdited) setDeadlineAt(suggestDeadline(e.target.value, shift));
+                    }}
                     className="text-xs font-mono"
                     required
                   />
@@ -476,7 +493,10 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
                   <label className="block text-xs font-semibold text-foreground mb-1">Turno *</label>
                   <select
                     value={shift}
-                    onChange={e => setShift(e.target.value as any)}
+                    onChange={e => {
+                      setShift(e.target.value as any);
+                      if (!deadlineEdited) setDeadlineAt(suggestDeadline(serviceDate, e.target.value));
+                    }}
                     className="w-full text-xs p-2 border border-input rounded-lg focus:outline-hidden"
                   >
                     <option value="manha">Manhã</option>
@@ -491,7 +511,10 @@ export const DutyRoster: React.FC<DutyRosterProps> = ({ onSelectScheduleForWriti
                 <Input
                   type="datetime-local"
                   value={deadlineAt}
-                  onChange={e => setDeadlineAt(e.target.value)}
+                  onChange={e => {
+                    setDeadlineEdited(true);
+                    setDeadlineAt(e.target.value);
+                  }}
                   className="text-xs font-mono"
                   required
                 />

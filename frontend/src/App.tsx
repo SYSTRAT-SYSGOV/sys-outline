@@ -100,7 +100,7 @@ function AppContent() {
       hasSermonToPreview={Boolean(editingSermon)}
     >
       {currentTab !== 'schedules' && currentTab !== 'home' && <DeadlineAlert onOpenSchedules={() => setCurrentTab('schedules')} />}
-      {currentTab === 'home' && <HomeDashboard onNavigate={setCurrentTab} />}
+      {currentTab === 'home' && <HomeDashboard onNavigate={setCurrentTab} onWrite={handleSelectScheduleForWriting} />}
 
       {currentTab === 'editor' && (
         <SermonEditor

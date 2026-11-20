@@ -50,4 +50,3 @@ class DutySchedule extends Model
         return $this->hasOne(SermonSummary::class);
     }
 }
-

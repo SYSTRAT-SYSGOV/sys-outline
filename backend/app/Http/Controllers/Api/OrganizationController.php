@@ -18,7 +18,7 @@ class OrganizationController extends Controller
     {
         $query = Organization::query();
 
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             $query->whereKey($request->user()->organization_id);
         }
 
@@ -96,7 +96,7 @@ class OrganizationController extends Controller
             'name' => 'sometimes|required|string|max:150',
             'type' => $user->isAdmin() ? 'sometimes|required|in:catedral,nucleo' : 'prohibited',
             'slug' => $user->isAdmin()
-                ? 'sometimes|nullable|string|max:150|unique:organizations,slug,' . $organization->id
+                ? 'sometimes|nullable|string|max:150|unique:organizations,slug,'.$organization->id
                 : 'prohibited',
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
@@ -121,6 +121,7 @@ class OrganizationController extends Controller
         // Se houver resumos associados, desativar ao invés de deletar
         if ($organization->sermonSummaries()->exists()) {
             $organization->update(['active' => false]);
+
             return response()->json([
                 'message' => 'A unidade possui resumos vinculados e foi desativada.',
             ]);
@@ -152,7 +153,7 @@ class OrganizationController extends Controller
                 Storage::disk('public')->delete($organization->banner_path);
             }
             $bannerPath = $request->file('banner')->store('banners', 'public');
-            $organization->banner_path = '/storage/' . $bannerPath;
+            $organization->banner_path = '/storage/'.$bannerPath;
             $updated['banner_path'] = $organization->banner_path;
         }
 
@@ -161,7 +162,7 @@ class OrganizationController extends Controller
                 Storage::disk('public')->delete($organization->qr_pix_path);
             }
             $qrPath = $request->file('qr_code')->store('qrcodes', 'public');
-            $organization->qr_pix_path = '/storage/' . $qrPath;
+            $organization->qr_pix_path = '/storage/'.$qrPath;
             $updated['qr_pix_path'] = $organization->qr_pix_path;
         }
 

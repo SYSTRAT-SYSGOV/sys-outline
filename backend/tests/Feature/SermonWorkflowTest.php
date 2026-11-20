@@ -25,7 +25,7 @@ class SermonWorkflowTest extends TestCase
         $token = $scribe->createToken('test')->plainTextToken;
 
         // 1. Criar rascunho
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/sermons', [
                 'organization_id' => $catedral->id,
                 'theme' => 'Tema de Teste',
@@ -48,7 +48,7 @@ class SermonWorkflowTest extends TestCase
         $summaryId = $response->json('data.id');
 
         // 2. Submeter para revisão
-        $submitResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $submitResponse = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/sermons/{$summaryId}/submit");
 
         $submitResponse->assertStatus(200)
@@ -69,7 +69,7 @@ class SermonWorkflowTest extends TestCase
         // Texto com 3.450 caracteres
         $longText = str_repeat('A Palavra de Deus é viva e eficaz. ', 100);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/sermons', [
                 'organization_id' => $catedral->id,
                 'theme' => 'Tema Excesso',
@@ -96,20 +96,20 @@ class SermonWorkflowTest extends TestCase
         $summary->update(['status' => 'submitted', 'reviewer_user_id' => null, 'approved_at' => null]);
 
         // Revisor consulta fila
-        $queueResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $queueResponse = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/review-queue');
 
         $queueResponse->assertStatus(200);
 
         // Revisor inicia revisão
-        $startResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $startResponse = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/sermons/{$summary->id}/start-review");
 
         $startResponse->assertStatus(200)
             ->assertJsonPath('data.status', 'in_review');
 
         // Revisor aprova
-        $approveResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $approveResponse = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/sermons/{$summary->id}/approve", [
                 'notes' => 'Tudo verificado e aprovado.',
             ]);
@@ -120,4 +120,3 @@ class SermonWorkflowTest extends TestCase
         $this->assertEquals('approved', $summary->fresh()->status);
     }
 }
-

@@ -38,4 +38,3 @@ class CheckDutyDeadlines extends Command
         return self::SUCCESS;
     }
 }
-

@@ -22,4 +22,3 @@ class WeeklyAgendaItem extends Model
         return $this->belongsTo(SermonSummary::class);
     }
 }
-

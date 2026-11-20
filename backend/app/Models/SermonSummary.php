@@ -26,6 +26,11 @@ class SermonSummary extends Model
         'leader_guidelines',
         'scripture_text',
         'summary_text',
+        'announcements',
+        'announcements_source_date',
+        'announcements_locked_at',
+        'distributed_at',
+        'reopen_count',
         'banner_path',
         'qr_pix_path',
         'rejection_reason',
@@ -47,8 +52,8 @@ class SermonSummary extends Model
 
     public function getAuthHashAttribute(): string
     {
-        $dateStr = $this->service_date instanceof \DateTimeInterface 
-            ? $this->service_date->format('Y-m-d') 
+        $dateStr = $this->service_date instanceof \DateTimeInterface
+            ? $this->service_date->format('Y-m-d')
             : (string) ($this->service_date ?? '2026-10-18');
 
         $payload = implode('|', [
@@ -103,26 +108,63 @@ class SermonSummary extends Model
     public function getQuestionsAttribute(): array
     {
         if ($this->relationLoaded('sharingQuestions')) {
-            return $this->sharingQuestions->map(fn($q) => [
+            return $this->sharingQuestions->map(fn ($q) => [
                 'id' => $q->id,
                 'question_text' => $q->question_text,
                 'order_index' => $q->order_index,
             ])->values()->all();
         }
+
         return [];
     }
 
     public function getAgendaAttribute(): array
     {
         if ($this->relationLoaded('weeklyAgendaItems')) {
-            return $this->weeklyAgendaItems->map(fn($item) => [
+            return $this->weeklyAgendaItems->map(fn ($item) => [
                 'id' => $item->id,
                 'day_label' => $item->day_time_text,
                 'event_description' => $item->description_text,
                 'order_index' => $item->order_index,
             ])->values()->all();
         }
+
         return [];
+    }
+
+    /**
+     * Bloco estruturado de avisos da semana.
+     *
+     * Resumos anteriores à coluna `announcements` continuam funcionando:
+     * quando o JSON está vazio, os itens legados de `weekly_agenda_items`
+     * são convertidos para o novo formato.
+     */
+    public function getAnnouncementsAttribute($value): array
+    {
+        $decoded = is_array($value)
+            ? $value
+            : (is_string($value) ? json_decode($value, true) : null);
+
+        if (is_array($decoded) && $decoded !== []) {
+            return array_values($decoded);
+        }
+
+        if ($this->relationLoaded('weeklyAgendaItems')) {
+            return $this->weeklyAgendaItems->map(fn ($item) => [
+                'id' => (string) $item->id,
+                'title' => (string) $item->day_time_text,
+                'description' => (string) $item->description_text,
+                'expires_at' => null,
+                'is_new' => false,
+            ])->values()->all();
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function isDistributed(): bool
+    {
+        return $this->distributed_at !== null;
     }
 
     protected function casts(): array
@@ -130,6 +172,11 @@ class SermonSummary extends Model
         return [
             'service_date' => 'date',
             'approved_at' => 'datetime',
+            'announcements' => 'array',
+            'announcements_source_date' => 'date',
+            'announcements_locked_at' => 'datetime',
+            'distributed_at' => 'datetime',
+            'reopen_count' => 'integer',
         ];
     }
 
@@ -168,4 +215,3 @@ class SermonSummary extends Model
         return $this->hasMany(ReviewAuditLog::class)->latest();
     }
 }
-

@@ -20,7 +20,7 @@ class UserController extends Controller
         $query = User::with('organization');
 
         // Se não for admin, restringe à sua própria organização
-        if (!$currentUser->isAdmin()) {
+        if (! $currentUser->isAdmin()) {
             $query->where('organization_id', $currentUser->organization_id)
                 ->where('role', '!=', 'admin');
         } elseif ($request->has('organization_id')) {
@@ -66,7 +66,7 @@ class UserController extends Controller
                 403
             );
             $validated['organization_id'] = $actor->organization_id;
-        } elseif (!$actor->isAdmin()) {
+        } elseif (! $actor->isAdmin()) {
             abort(403);
         } elseif (in_array($validated['role'], ['unit_admin', 'reviewer', 'scribe'], true)
             && empty($validated['organization_id'])) {
@@ -120,7 +120,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'organization_id' => 'nullable|exists:organizations,id',
             'name' => 'sometimes|required|string|max:120',
-            'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+            'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:6',
             'role' => ['sometimes', 'required', Rule::in($actor->isAdmin()
                 ? ['admin', 'unit_admin', 'reviewer', 'scribe']
@@ -159,7 +159,7 @@ class UserController extends Controller
             }
         }
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
@@ -182,6 +182,7 @@ class UserController extends Controller
 
         if ($user->sermonSummaries()->exists() || $user->dutySchedules()->exists()) {
             $user->update(['active' => false]);
+
             return response()->json([
                 'message' => 'O usuário possui escalas ou resumos vinculados e foi desativado.',
             ]);
@@ -200,7 +201,7 @@ class UserController extends Controller
 
         if ($actor->isUnitAdmin()) {
             abort_unless(in_array($target->role, ['reviewer', 'scribe'], true), 403);
-        } elseif (!$actor->isAdmin()) {
+        } elseif (! $actor->isAdmin()) {
             abort(403);
         }
     }

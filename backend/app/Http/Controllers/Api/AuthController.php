@@ -29,13 +29,13 @@ class AuthController extends Controller
             || ($request->password === 'password123' && Hash::check('password', $user->password))
         );
 
-        if (!$user || !$passwordMatches) {
+        if (! $user || ! $passwordMatches) {
             throw ValidationException::withMessages([
                 'email' => ['As credenciais fornecidas estão incorretas.'],
             ]);
         }
 
-        if (!$user->active) {
+        if (! $user->active) {
             return response()->json([
                 'message' => 'Usuário inativo. Entre em contato com a administração.',
             ], 403);
@@ -107,4 +107,3 @@ class AuthController extends Controller
         ]);
     }
 }
-

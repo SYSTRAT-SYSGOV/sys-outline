@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DutySchedule;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
 
 class DutyScheduleController extends Controller
 {
@@ -20,7 +20,7 @@ class DutyScheduleController extends Controller
         $query = DutySchedule::with(['organization', 'scribe', 'substitute', 'summary']);
 
         // Segregação por organização para quem não é admin
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             $query->where('organization_id', $user->organization_id);
         } elseif ($request->has('organization_id')) {
             $query->where('organization_id', $request->organization_id);
@@ -46,8 +46,8 @@ class DutyScheduleController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('notes', 'like', "%{$search}%")
-                  ->orWhereHas('scribe', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('organization', fn($oq) => $oq->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('scribe', fn ($sq) => $sq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('organization', fn ($oq) => $oq->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -68,7 +68,7 @@ class DutyScheduleController extends Controller
         $schedules = DutySchedule::with(['organization', 'substitute', 'summary'])
             ->where(function ($q) use ($user) {
                 $q->where('scribe_user_id', $user->id)
-                  ->orWhere('substitute_user_id', $user->id);
+                    ->orWhere('substitute_user_id', $user->id);
             })
             ->orderBy('service_date', 'desc')
             ->get();
@@ -106,7 +106,7 @@ class DutyScheduleController extends Controller
             ->where('service_time', $validated['service_time'])
             ->where(function ($q) use ($validated) {
                 $q->where('scribe_user_id', $validated['scribe_user_id'])
-                  ->orWhere('substitute_user_id', $validated['scribe_user_id']);
+                    ->orWhere('substitute_user_id', $validated['scribe_user_id']);
             })
             ->exists();
 
@@ -180,7 +180,7 @@ class DutyScheduleController extends Controller
                 ->where('service_time', $serviceTime)
                 ->where(function ($q) use ($scribeId) {
                     $q->where('scribe_user_id', $scribeId)
-                      ->orWhere('substitute_user_id', $scribeId);
+                        ->orWhere('substitute_user_id', $scribeId);
                 })
                 ->exists();
 
@@ -227,16 +227,16 @@ class DutyScheduleController extends Controller
         int $scribeId,
         ?int $substituteId
     ): void {
-        $scribe = \App\Models\User::find($scribeId);
-        if (!$scribe || !$scribe->isScribe() || $scribe->organization_id !== $organizationId) {
+        $scribe = User::find($scribeId);
+        if (! $scribe || ! $scribe->isScribe() || $scribe->organization_id !== $organizationId) {
             throw ValidationException::withMessages([
                 'scribe_user_id' => ['O escriba deve pertencer à unidade selecionada.'],
             ]);
         }
 
         if ($substituteId !== null) {
-            $substitute = \App\Models\User::find($substituteId);
-            if (!$substitute || !$substitute->isScribe() || $substitute->organization_id !== $organizationId) {
+            $substitute = User::find($substituteId);
+            if (! $substitute || ! $substitute->isScribe() || $substitute->organization_id !== $organizationId) {
                 throw ValidationException::withMessages([
                     'substitute_user_id' => ['O suplente deve pertencer à unidade selecionada.'],
                 ]);

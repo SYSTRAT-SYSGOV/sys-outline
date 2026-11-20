@@ -8,12 +8,18 @@ use App\Models\ReviewAuditLog;
 use App\Models\SermonSummary;
 use App\Models\SharingQuestion;
 use App\Models\WeeklyAgendaItem;
+use App\Services\AnnouncementInheritanceService;
+use App\Support\Announcements;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SermonSummaryController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Listar resumos de ministrações.
      */
@@ -23,7 +29,7 @@ class SermonSummaryController extends Controller
         $query = SermonSummary::with(['organization', 'scribe', 'reviewer', 'dutySchedule']);
 
         // Se for revisor ou escriba, restringe por localidade padrão (a menos que seja admin)
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             $query->where('organization_id', $user->organization_id);
         } elseif ($request->has('organization_id')) {
             $query->where('organization_id', $request->organization_id);
@@ -49,10 +55,10 @@ class SermonSummaryController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('theme', 'like', "%{$search}%")
-                  ->orWhere('scripture_text', 'like', "%{$search}%")
-                  ->orWhere('minister_name', 'like', "%{$search}%")
-                  ->orWhereHas('organization', fn($oq) => $oq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('scribe', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
+                    ->orWhere('scripture_text', 'like', "%{$search}%")
+                    ->orWhere('minister_name', 'like', "%{$search}%")
+                    ->orWhereHas('organization', fn ($oq) => $oq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('scribe', fn ($sq) => $sq->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -80,12 +86,12 @@ class SermonSummaryController extends Controller
             ->where('status', 'approved')
             ->orderBy('service_date', 'desc')
             ->orderBy('id', 'desc');
-        if (!$user->isAdmin() || $orgId !== null) {
+        if (! $user->isAdmin() || $orgId !== null) {
             $last->where('organization_id', $orgId);
         }
         $last = $last->first();
 
-        if (!$last) {
+        if (! $last) {
             return response()->json([
                 'data' => null,
                 'message' => 'Nenhum resumo aprovado anteriormente encontrado para esta unidade.',
@@ -98,7 +104,9 @@ class SermonSummaryController extends Controller
                 'organization_name' => $last->organization?->name,
                 'cell_direction' => $last->cell_direction,
                 'leader_guidelines' => $last->leader_guidelines,
-                'weekly_agenda_items' => $last->weeklyAgendaItems->map(fn($item) => [
+                'announcements' => $last->announcements,
+                'announcements_source_date' => $last->service_date?->toDateString(),
+                'weekly_agenda_items' => $last->weeklyAgendaItems->map(fn ($item) => [
                     'order_index' => $item->order_index,
                     'day_time_text' => $item->day_time_text,
                     'description_text' => $item->description_text,
@@ -115,10 +123,10 @@ class SermonSummaryController extends Controller
     public function reviewQueue(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = SermonSummary::with(['organization', 'scribe', 'reviewer', 'dutySchedule'])
+        $query = SermonSummary::with(['organization', 'scribe', 'reviewer', 'dutySchedule', 'auditLogs'])
             ->whereIn('status', ['submitted', 'in_review']);
 
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             $query->where('organization_id', $user->organization_id);
         } elseif ($request->has('organization_id')) {
             $query->where('organization_id', $request->organization_id);
@@ -140,14 +148,36 @@ class SermonSummaryController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('theme', 'like', "%{$search}%")
-                  ->orWhere('scripture_text', 'like', "%{$search}%")
-                  ->orWhere('minister_name', 'like', "%{$search}%")
-                  ->orWhereHas('organization', fn($oq) => $oq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('scribe', fn($sq) => $sq->where('name', 'like', "%{$search}%"));
+                    ->orWhere('scripture_text', 'like', "%{$search}%")
+                    ->orWhere('minister_name', 'like', "%{$search}%")
+                    ->orWhereHas('organization', fn ($oq) => $oq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('scribe', fn ($sq) => $sq->where('name', 'like', "%{$search}%"));
             });
         }
 
         $queue = $query->orderBy('service_date', 'asc')->get();
+
+        $today = Carbon::now('America/Sao_Paulo')->startOfDay();
+
+        $queue->each(function (SermonSummary $summary) use ($today) {
+            $logs = $summary->auditLogs;
+
+            $lastSubmission = $logs->firstWhere('action', 'submitted');
+            $returnCount = $logs->where('action', 'rejected')->count();
+
+            $summary->setAttribute('pending_since', $lastSubmission?->created_at);
+            $summary->setAttribute('return_count', $returnCount);
+            $summary->setAttribute('needs_coordinator_attention', $returnCount >= 3);
+            $summary->setAttribute(
+                'days_until_sunday',
+                $summary->service_date
+                    ? (int) $today->diffInDays(
+                        Carbon::parse($summary->service_date->toDateString(), 'America/Sao_Paulo')->startOfDay(),
+                        false
+                    )
+                    : null
+            );
+        });
 
         return response()->json([
             'data' => $queue,
@@ -162,30 +192,30 @@ class SermonSummaryController extends Controller
         $data = $request->all();
 
         // Mapeamento de chaves legadas ou do frontend para a tabela sermon_summaries
-        if (!isset($data['theme']) && isset($data['title_theme'])) {
+        if (! isset($data['theme']) && isset($data['title_theme'])) {
             $data['theme'] = $data['title_theme'];
         }
-        if (!isset($data['minister_name']) && isset($data['preacher_name'])) {
+        if (! isset($data['minister_name']) && isset($data['preacher_name'])) {
             $data['minister_name'] = $data['preacher_name'];
         }
-        if (!isset($data['minister_title']) && isset($data['preacher_title'])) {
+        if (! isset($data['minister_title']) && isset($data['preacher_title'])) {
             $data['minister_title'] = $data['preacher_title'];
         }
-        if (!isset($data['cell_direction']) && isset($data['cell_aim'])) {
+        if (! isset($data['cell_direction']) && isset($data['cell_aim'])) {
             $data['cell_direction'] = $data['cell_aim'];
         }
-        if (!isset($data['scripture_text']) && isset($data['scripture_reference'])) {
+        if (! isset($data['scripture_text']) && isset($data['scripture_reference'])) {
             $data['scripture_text'] = $data['scripture_reference'];
         }
-        if (!isset($data['location_name']) && isset($data['location'])) {
+        if (! isset($data['location_name']) && isset($data['location'])) {
             $data['location_name'] = $data['location'];
         }
-        if (!isset($data['qr_pix_path']) && isset($data['qr_code_url'])) {
+        if (! isset($data['qr_pix_path']) && isset($data['qr_code_url'])) {
             $data['qr_pix_path'] = $data['qr_code_url'];
         }
 
         // Normalização das perguntas para compartilhamento
-        if (!isset($data['sharing_questions']) && isset($data['questions']) && is_array($data['questions'])) {
+        if (! isset($data['sharing_questions']) && isset($data['questions']) && is_array($data['questions'])) {
             $data['sharing_questions'] = [];
             foreach ($data['questions'] as $q) {
                 if (is_string($q) && trim($q) !== '') {
@@ -197,7 +227,7 @@ class SermonSummaryController extends Controller
         }
 
         // Normalização da agenda semanal
-        if (!isset($data['weekly_agenda']) && isset($data['agenda']) && is_array($data['agenda'])) {
+        if (! isset($data['weekly_agenda']) && isset($data['agenda']) && is_array($data['agenda'])) {
             $data['weekly_agenda'] = [];
             foreach ($data['agenda'] as $ag) {
                 if (is_array($ag)) {
@@ -231,7 +261,7 @@ class SermonSummaryController extends Controller
         if (empty($input['organization_id']) && $user->organization_id) {
             $input['organization_id'] = $user->organization_id;
         }
-        if (!$user->isAdmin() && isset($input['organization_id'])) {
+        if (! $user->isAdmin() && isset($input['organization_id'])) {
             abort_unless($user->canAccessOrganization((int) $input['organization_id']), 404);
         }
 
@@ -251,12 +281,13 @@ class SermonSummaryController extends Controller
                 'summary_text' => 'nullable|string|max:3400',
                 'sharing_questions' => 'nullable|array',
                 'weekly_agenda' => 'nullable|array',
+                ...Announcements::rules(),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors()->first(),
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -288,12 +319,13 @@ class SermonSummaryController extends Controller
                 'summary_text' => 'required|string|max:3400', // Limite estrito de 3.400 caracteres
                 'sharing_questions' => 'nullable|array',
                 'weekly_agenda' => 'nullable|array',
+                ...Announcements::rules(),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors()->first(),
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -301,7 +333,7 @@ class SermonSummaryController extends Controller
             $validated['status'] = $status;
         }
 
-        if (!empty($validated['duty_schedule_id'])) {
+        if (! empty($validated['duty_schedule_id'])) {
             $schedule = DutySchedule::findOrFail($validated['duty_schedule_id']);
             abort_unless(
                 $schedule->organization_id === (int) $validated['organization_id']
@@ -311,6 +343,17 @@ class SermonSummaryController extends Controller
         }
 
         return DB::transaction(function () use ($validated, $user) {
+            $inheritance = app(AnnouncementInheritanceService::class)->inherit(
+                (int) $validated['organization_id'],
+                $validated['service_date']
+            );
+
+            $providedAnnouncements = $validated['announcements'] ?? null;
+            $usedInheritance = ! is_array($providedAnnouncements) || $providedAnnouncements === [];
+            $announcements = $usedInheritance
+                ? $inheritance['announcements']
+                : Announcements::normalize($providedAnnouncements);
+
             $summary = SermonSummary::create([
                 'duty_schedule_id' => $validated['duty_schedule_id'] ?? null,
                 'organization_id' => $validated['organization_id'],
@@ -326,15 +369,17 @@ class SermonSummaryController extends Controller
                 'leader_guidelines' => $validated['leader_guidelines'],
                 'scripture_text' => $validated['scripture_text'],
                 'summary_text' => $validated['summary_text'],
+                'announcements' => $announcements,
+                'announcements_source_date' => $usedInheritance ? $inheritance['source_date'] : null,
             ]);
 
-            if (!empty($validated['duty_schedule_id'])) {
+            if (! empty($validated['duty_schedule_id'])) {
                 DutySchedule::where('id', $validated['duty_schedule_id'])->update([
                     'status' => ($validated['status'] === 'submitted' ? 'submitted' : 'draft'),
                 ]);
             }
 
-            if (!empty($validated['sharing_questions'])) {
+            if (! empty($validated['sharing_questions'])) {
                 foreach ($validated['sharing_questions'] as $idx => $qText) {
                     if (is_string($qText) && trim($qText) !== '') {
                         SharingQuestion::create([
@@ -346,7 +391,7 @@ class SermonSummaryController extends Controller
                 }
             }
 
-            if (!empty($validated['weekly_agenda'])) {
+            if (! empty($validated['weekly_agenda'])) {
                 foreach ($validated['weekly_agenda'] as $idx => $ag) {
                     if (is_array($ag) && (trim($ag['dia'] ?? '') !== '' || trim($ag['aviso'] ?? '') !== '')) {
                         WeeklyAgendaItem::create([
@@ -366,6 +411,20 @@ class SermonSummaryController extends Controller
                 'feedback_notes' => $validated['status'] === 'submitted' ? 'Resumo submetido diretamente.' : 'Rascunho inicial criado.',
             ]);
 
+            if ($usedInheritance && $inheritance['source_id']) {
+                ReviewAuditLog::create([
+                    'sermon_summary_id' => $summary->id,
+                    'user_id' => $user->id,
+                    'action' => 'announcements_inherited',
+                    'feedback_notes' => 'Avisos herdados da publicação de '.$inheritance['source_date'].'.',
+                    'metadata' => [
+                        'source_id' => $inheritance['source_id'],
+                        'source_date' => $inheritance['source_date'],
+                        'omitted' => $inheritance['omitted'],
+                    ],
+                ]);
+            }
+
             return response()->json([
                 'message' => 'Resumo salvo com sucesso.',
                 'data' => $summary->load(['organization', 'sharingQuestions', 'weeklyAgendaItems']),
@@ -378,7 +437,7 @@ class SermonSummaryController extends Controller
      */
     public function show(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('view', $sermonSummary);
 
         return response()->json([
             'data' => $sermonSummary->load([
@@ -399,16 +458,55 @@ class SermonSummaryController extends Controller
     public function update(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
         $user = $request->user();
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('view', $sermonSummary);
 
-        // Não permite alteração direta se já estiver aprovado, exceto por admin
-        if ($sermonSummary->status === 'approved' && !$user->isAdmin()) {
+        if ($sermonSummary->isDistributed()) {
             return response()->json([
-                'message' => 'Resumos aprovados não podem ser alterados.',
+                'message' => 'Documento dominical já distribuído e travado. Alterações exigem um novo ciclo.',
             ], 422);
         }
 
         $input = $this->normalizePayload($request);
+
+        $contentKeys = [
+            'theme', 'minister_title', 'minister_name', 'service_date',
+            'location_name', 'qr_pix_path', 'cell_direction', 'leader_guidelines',
+            'scripture_text', 'summary_text', 'sharing_questions', 'weekly_agenda',
+        ];
+
+        $hasContentChanges = collect($contentKeys)->contains(
+            fn (string $key) => array_key_exists($key, $input)
+        );
+        $hasAnnouncementChanges = array_key_exists('announcements', $input);
+
+        if (! $hasContentChanges && ! $hasAnnouncementChanges) {
+            return response()->json([
+                'message' => 'Nenhum campo para atualizar.',
+            ], 422);
+        }
+
+        if ($hasContentChanges && $sermonSummary->status === 'approved') {
+            return response()->json([
+                'message' => 'Resumo aprovado é imutável. Reabra para revisão para alterar texto, tema ou preletor.',
+            ], 422);
+        }
+
+        if ($hasContentChanges) {
+            $this->authorize('updateContent', $sermonSummary);
+        }
+
+        if ($hasAnnouncementChanges) {
+            $this->authorize('updateAnnouncements', $sermonSummary);
+        }
+
+        if (isset($input['status'])
+            && $input['status'] !== 'draft'
+            && $input['status'] !== $sermonSummary->status) {
+            return response()->json([
+                'message' => 'Use a submissão para enviar o resumo à revisão.',
+            ], 422);
+        }
+
         $targetStatus = $input['status'] ?? $sermonSummary->status;
         $isDraft = ($targetStatus === 'draft');
 
@@ -425,23 +523,24 @@ class SermonSummaryController extends Controller
             'summary_text' => 'sometimes|nullable|string|max:3400',
             'sharing_questions' => 'nullable|array',
             'weekly_agenda' => 'nullable|array',
+            ...Announcements::rules(),
         ];
 
         $validator = validator($input, $rules);
         if ($validator->fails()) {
             return response()->json([
                 'message' => $validator->errors()->first(),
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $validated = $validator->validated();
 
-        return DB::transaction(function () use ($validated, $input, $sermonSummary, $user, $targetStatus) {
+        return DB::transaction(function () use ($validated, $input, $sermonSummary, $user, $targetStatus, $hasContentChanges, $hasAnnouncementChanges) {
             $updatableKeys = [
                 'theme', 'minister_title', 'minister_name', 'service_date',
                 'location_name', 'cell_direction', 'leader_guidelines',
-                'scripture_text', 'summary_text', 'qr_pix_path'
+                'scripture_text', 'summary_text', 'qr_pix_path',
             ];
 
             $updateData = [];
@@ -453,13 +552,13 @@ class SermonSummaryController extends Controller
 
             // Fallbacks caso o usuário limpe um campo essencial durante o rascunho
             if (array_key_exists('theme', $updateData)) {
-                $updateData['theme'] = trim((string)$updateData['theme']) ?: 'Rascunho';
+                $updateData['theme'] = trim((string) $updateData['theme']) ?: 'Rascunho';
             }
             if (array_key_exists('minister_name', $updateData)) {
-                $updateData['minister_name'] = trim((string)$updateData['minister_name']) ?: 'Ministrante';
+                $updateData['minister_name'] = trim((string) $updateData['minister_name']) ?: 'Ministrante';
             }
             if (array_key_exists('minister_title', $updateData)) {
-                $updateData['minister_title'] = trim((string)$updateData['minister_title']) ?: 'pela';
+                $updateData['minister_title'] = trim((string) $updateData['minister_title']) ?: 'pela';
             }
             if (array_key_exists('cell_direction', $updateData) && $updateData['cell_direction'] === null) {
                 $updateData['cell_direction'] = '';
@@ -472,6 +571,16 @@ class SermonSummaryController extends Controller
             }
             if (array_key_exists('summary_text', $updateData) && $updateData['summary_text'] === null) {
                 $updateData['summary_text'] = '';
+            }
+
+            if (array_key_exists('announcements', $validated)) {
+                $announcements = Announcements::normalize($validated['announcements'] ?? []);
+
+                if ($announcements !== $sermonSummary->announcements) {
+                    $updateData['announcements_source_date'] = null;
+                }
+
+                $updateData['announcements'] = $announcements;
             }
 
             if (isset($input['status'])) {
@@ -511,12 +620,23 @@ class SermonSummaryController extends Controller
                 }
             }
 
-            ReviewAuditLog::create([
-                'sermon_summary_id' => $sermonSummary->id,
-                'user_id' => $user->id,
-                'action' => 'content_updated',
-                'feedback_notes' => 'Conteúdo do resumo atualizado.',
-            ]);
+            if ($hasContentChanges) {
+                ReviewAuditLog::create([
+                    'sermon_summary_id' => $sermonSummary->id,
+                    'user_id' => $user->id,
+                    'action' => 'content_updated',
+                    'feedback_notes' => 'Conteúdo do resumo atualizado.',
+                ]);
+            }
+
+            if ($hasAnnouncementChanges) {
+                ReviewAuditLog::create([
+                    'sermon_summary_id' => $sermonSummary->id,
+                    'user_id' => $user->id,
+                    'action' => 'announcements_updated',
+                    'feedback_notes' => 'Avisos da semana atualizados.',
+                ]);
+            }
 
             return response()->json([
                 'message' => 'Resumo atualizado com sucesso.',
@@ -526,12 +646,58 @@ class SermonSummaryController extends Controller
     }
 
     /**
+     * Atualizar somente o bloco de avisos da semana.
+     */
+    public function updateAnnouncements(Request $request, SermonSummary $sermonSummary): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($sermonSummary->isDistributed()) {
+            return response()->json([
+                'message' => 'Documento dominical já distribuído e travado. Alterações seguem por um novo ciclo.',
+            ], 422);
+        }
+
+        $this->authorize('updateAnnouncements', $sermonSummary);
+
+        $validator = validator($request->all(), Announcements::rules());
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $announcements = Announcements::normalize($validated['announcements'] ?? []);
+
+        if ($announcements !== $sermonSummary->announcements) {
+            $sermonSummary->announcements_source_date = null;
+        }
+
+        $sermonSummary->announcements = $announcements;
+        $sermonSummary->save();
+
+        ReviewAuditLog::create([
+            'sermon_summary_id' => $sermonSummary->id,
+            'user_id' => $user->id,
+            'action' => 'announcements_updated',
+            'feedback_notes' => 'Avisos da semana atualizados.',
+        ]);
+
+        return response()->json([
+            'message' => 'Avisos atualizados com sucesso.',
+            'data' => $sermonSummary->load(['organization', 'sharingQuestions', 'weeklyAgendaItems']),
+        ]);
+    }
+
+    /**
      * Submeter resumo para revisão.
      */
     public function submitForReview(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
         $user = $request->user();
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('submit', $sermonSummary);
 
         if (mb_strlen($sermonSummary->summary_text) > 3400) {
             return response()->json([
@@ -566,7 +732,13 @@ class SermonSummaryController extends Controller
     public function startReview(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
         $user = $request->user();
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('startReview', $sermonSummary);
+
+        if (! in_array($sermonSummary->status, ['submitted', 'in_review'], true)) {
+            return response()->json([
+                'message' => 'Somente resumos submetidos ou em revisão podem ser assumidos.',
+            ], 422);
+        }
 
         $sermonSummary->update([
             'status' => 'in_review',
@@ -592,7 +764,13 @@ class SermonSummaryController extends Controller
     public function approve(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
         $user = $request->user();
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('approve', $sermonSummary);
+
+        if (! in_array($sermonSummary->status, ['submitted', 'in_review'], true)) {
+            return response()->json([
+                'message' => 'Somente resumos submetidos ou em revisão podem ser aprovados.',
+            ], 422);
+        }
 
         $request->validate([
             'notes' => 'nullable|string',
@@ -627,11 +805,17 @@ class SermonSummaryController extends Controller
     public function reject(Request $request, SermonSummary $sermonSummary): JsonResponse
     {
         $user = $request->user();
-        $this->authorizeSummaryAccess($request, $sermonSummary);
+        $this->authorize('reject', $sermonSummary);
+
+        if (! in_array($sermonSummary->status, ['submitted', 'in_review'], true)) {
+            return response()->json([
+                'message' => 'Somente resumos submetidos ou em revisão podem ser devolvidos.',
+            ], 422);
+        }
 
         $reason = $request->input('rejection_reason') ?? $request->input('notes') ?? $request->input('feedback_notes');
 
-        if (!$reason || mb_strlen(trim($reason)) < 5) {
+        if (! $reason || mb_strlen(trim($reason)) < 5) {
             return response()->json([
                 'message' => 'O motivo da devolução/correção é obrigatório (mínimo de 5 caracteres).',
                 'errors' => ['rejection_reason' => ['O motivo da devolução é obrigatório (mínimo de 5 caracteres).']],
@@ -657,6 +841,146 @@ class SermonSummaryController extends Controller
     }
 
     /**
+     * Reabrir formalmente um resumo aprovado, invalidando a aprovação anterior.
+     */
+    public function reopen(Request $request, SermonSummary $sermonSummary): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorize('view', $sermonSummary);
+
+        if ($sermonSummary->status !== 'approved' || $sermonSummary->isDistributed()) {
+            return response()->json([
+                'message' => 'Somente resumos aprovados e não distribuídos podem ser reabertos.',
+            ], 422);
+        }
+
+        $reason = $request->input('reason') ?? $request->input('reopen_reason');
+
+        if (! $reason || mb_strlen(trim((string) $reason)) < 5) {
+            return response()->json([
+                'message' => 'O motivo da reabertura é obrigatório (mínimo de 5 caracteres).',
+                'errors' => ['reason' => ['O motivo da reabertura é obrigatório (mínimo de 5 caracteres).']],
+            ], 422);
+        }
+
+        $this->authorize('reopen', $sermonSummary);
+
+        return DB::transaction(function () use ($sermonSummary, $user, $reason) {
+            $locked = SermonSummary::whereKey($sermonSummary->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== 'approved' || $locked->isDistributed()) {
+                return response()->json([
+                    'message' => 'Somente resumos aprovados e não distribuídos podem ser reabertos.',
+                ], 422);
+            }
+
+            $previousApprovedAt = $locked->approved_at;
+            $newReopenCount = (int) $locked->reopen_count + 1;
+
+            $locked->update([
+                'status' => 'in_review',
+                'approved_at' => null,
+                'reviewer_user_id' => $user->id,
+                'reopen_count' => $newReopenCount,
+            ]);
+
+            ReviewAuditLog::create([
+                'sermon_summary_id' => $locked->id,
+                'user_id' => $user->id,
+                'action' => 'reopened',
+                'feedback_notes' => trim((string) $reason),
+                'metadata' => [
+                    'previous_approved_at' => $previousApprovedAt?->toIso8601String(),
+                    'reopen_count' => $newReopenCount,
+                ],
+            ]);
+
+            return response()->json([
+                'message' => 'Resumo reaberto para revisão. A aprovação anterior foi invalidada.',
+                'data' => $locked->load(['reviewer']),
+            ]);
+        });
+    }
+
+    /**
+     * Distribuir o documento dominical, travando o conteúdo aprovado.
+     */
+    public function distribute(Request $request, SermonSummary $sermonSummary): JsonResponse
+    {
+        $this->authorize('view', $sermonSummary);
+
+        if ($sermonSummary->status !== 'approved') {
+            return response()->json([
+                'message' => 'Somente resumos aprovados podem ser distribuídos.',
+            ], 422);
+        }
+
+        if ($sermonSummary->isDistributed()) {
+            return response()->json([
+                'message' => 'Documento dominical já distribuído e travado.',
+            ], 422);
+        }
+
+        if (Announcements::isEmpty($sermonSummary->announcements)) {
+            return response()->json([
+                'message' => 'Inclua ao menos um aviso antes de distribuir o documento dominical.',
+                'errors' => ['announcements' => ['O bloco de avisos é obrigatório para a distribuição.']],
+            ], 422);
+        }
+
+        $this->authorize('distribute', $sermonSummary);
+
+        return DB::transaction(function () use ($sermonSummary, $request) {
+            $locked = SermonSummary::whereKey($sermonSummary->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== 'approved') {
+                return response()->json([
+                    'message' => 'Somente resumos aprovados podem ser distribuídos.',
+                ], 422);
+            }
+
+            if ($locked->isDistributed()) {
+                return response()->json([
+                    'message' => 'Documento dominical já distribuído e travado.',
+                ], 422);
+            }
+
+            if (Announcements::isEmpty($locked->announcements)) {
+                return response()->json([
+                    'message' => 'Inclua ao menos um aviso antes de distribuir o documento dominical.',
+                    'errors' => ['announcements' => ['O bloco de avisos é obrigatório para a distribuição.']],
+                ], 422);
+            }
+
+            $now = now();
+
+            $locked->update([
+                'distributed_at' => $now,
+                'announcements_locked_at' => $now,
+            ]);
+
+            ReviewAuditLog::create([
+                'sermon_summary_id' => $locked->id,
+                'user_id' => $request->user()->id,
+                'action' => 'distributed',
+                'feedback_notes' => 'Documento dominical distribuído; avisos travados.',
+                'metadata' => [
+                    'distributed_at' => $now->toIso8601String(),
+                ],
+            ]);
+
+            return response()->json([
+                'message' => 'Documento dominical distribuído com sucesso. Conteúdo travado.',
+                'data' => $locked,
+            ]);
+        });
+    }
+
+    /**
      * Visualização pública de uma mensagem aprovada para líderes de célula.
      */
     public function publicView(SermonSummary $sermonSummary): JsonResponse
@@ -668,13 +992,5 @@ class SermonSummaryController extends Controller
         return response()->json([
             'data' => $sermonSummary->load(['organization', 'sharingQuestions', 'weeklyAgendaItems']),
         ]);
-    }
-
-    private function authorizeSummaryAccess(Request $request, SermonSummary $sermonSummary): void
-    {
-        abort_unless(
-            $request->user()->canAccessOrganization($sermonSummary->organization_id),
-            404
-        );
     }
 }

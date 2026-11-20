@@ -27,7 +27,7 @@ class DutyScheduleTest extends TestCase
 
         $token = $admin->createToken('test')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/schedules', [
                 'organization_id' => $catedral->id,
                 'scribe_user_id' => $scribe->id,
@@ -66,7 +66,7 @@ class DutyScheduleTest extends TestCase
         ]);
 
         // Tentativa de agendamento conflitante no mesmo dia e horário no núcleo
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/schedules', [
                 'organization_id' => $nucleo->id,
                 'scribe_user_id' => $scribe->id,

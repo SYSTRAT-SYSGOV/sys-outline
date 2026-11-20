@@ -24,7 +24,7 @@ class DashboardController extends Controller
         $schedulesQuery = DutySchedule::query();
         $volunteersQuery = User::where('active', true)->whereIn('role', ['scribe', 'reviewer']);
 
-        if (!$isAdmin && $orgId) {
+        if (! $isAdmin && $orgId) {
             $sermonsQuery->where('organization_id', $orgId);
             $schedulesQuery->where('organization_id', $orgId);
             $volunteersQuery->where('organization_id', $orgId);
@@ -60,4 +60,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-

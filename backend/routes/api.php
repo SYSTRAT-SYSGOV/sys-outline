@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sermons', [SermonSummaryController::class, 'store']);
     Route::get('/sermons/{sermonSummary}', [SermonSummaryController::class, 'show']);
     Route::put('/sermons/{sermonSummary}', [SermonSummaryController::class, 'update']);
+    Route::put('/sermons/{sermonSummary}/announcements', [SermonSummaryController::class, 'updateAnnouncements']);
     Route::post('/sermons/{sermonSummary}/submit', [SermonSummaryController::class, 'submitForReview']);
 
     // Fila e Ações de Revisão (Revisores e Administradores)
@@ -73,5 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/sermons/{sermonSummary}/start-review', [SermonSummaryController::class, 'startReview']);
         Route::post('/sermons/{sermonSummary}/approve', [SermonSummaryController::class, 'approve']);
         Route::post('/sermons/{sermonSummary}/reject', [SermonSummaryController::class, 'reject']);
+        Route::post('/sermons/{sermonSummary}/reopen', [SermonSummaryController::class, 'reopen']);
+        Route::post('/sermons/{sermonSummary}/distribute', [SermonSummaryController::class, 'distribute']);
     });
 });

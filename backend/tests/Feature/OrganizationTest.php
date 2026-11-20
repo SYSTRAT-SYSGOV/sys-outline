@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +21,7 @@ class OrganizationTest extends TestCase
         $user = User::where('email', 'admin@escriba.com')->first();
         $token = $user->createToken('test')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/organizations');
 
         $response->assertStatus(200)
@@ -34,7 +33,7 @@ class OrganizationTest extends TestCase
         $admin = User::where('email', 'admin@escriba.com')->first();
         $token = $admin->createToken('test')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/organizations', [
                 'name' => 'Casa de Israel - Núcleo Leste',
                 'type' => 'nucleo',
@@ -58,7 +57,7 @@ class OrganizationTest extends TestCase
         $scribe = User::where('email', 'escriba@escriba.com')->first();
         $token = $scribe->createToken('test')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/organizations', [
                 'name' => 'Tentativa Não Autorizada',
                 'type' => 'nucleo',
@@ -67,4 +66,3 @@ class OrganizationTest extends TestCase
         $response->assertStatus(403);
     }
 }
-

@@ -9,6 +9,7 @@ use App\Models\SermonSummary;
 use App\Models\SharingQuestion;
 use App\Models\User;
 use App\Models\WeeklyAgendaItem;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -111,13 +112,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 4. Resumo de Pregação de Exemplo (Aprovado)
-        $summaryText = "A ministração da Pastora Kelli trata da transição do povo de Israel. Após a morte de Moisés, Deus ordena a Josué: **\"Passa este Jordão\"** (Js 1:2). O rio é a fronteira entre sair do Egito e possuir a terra prometida. Chegamos até aqui pela graça e pela presença de Deus, e não por recursos ou méritos próprios.\n\n" .
-            "**1. A Barreira da Mentalidade:** A pastora destaca que muitos saíram do Egito (o lugar da escravidão), mas o Egito ainda não saiu deles. Ela define o Jordão não apenas como um rio geográfico, mas como uma barreira mental e espiritual. Atravessar o Jordão exige **\"desmontar\"** a mentalidade de escravo - a pessoa que murmura, que tem saudades do passado de dor e que se sente inferior diante dos gigantes. A vitória começa na mente: é preciso saber quem você é em Deus para saber para onde você está indo.\n\n" .
-            "**2. Coragem como Decisão:** Josué teve medo de assumir o legado de Moisés, e Deus repetiu: **\"Sê forte e corajoso\"** (Js 1:6-9), pois o Senhor está conosco por onde andarmos. Coragem é decisão, não sentimento: a emoção engana, e vivemos pelo que Deus disse. Quem fica paralisado no choro e na vitimização não avança, porque Deus se move pela Sua Palavra.\n\n" .
-            "**3. A Presenção de Deus e o Jordão de Cada Um:** Em um momento profundo, a ministração identifica que o \"Jordão\" de muitos hoje são as águas amargas da falta de perdão, do orgulho, do ressentimento entre casais e do distanciamento entre pais e filhos. Essas **\"águas\"** impedem a família de entrar na Terra Prometida. Atravessar o Jordão significa posicionar-se, renunciar ao orgulho e pedir perdão, entendendo que a obediência gera consequências para as próximas gerações.\n\n" .
-            "**4. A Dinâmica do Milagre:** O milagre da abertura das águas só aconteceu quando os sacerdotes colocaram os pés no rio. A lição é clara: Deus não abre o caminho para quem fica parado na margem chorando. O milagre exige o **\"passo de fé\"** em meio à incerteza. A estação da espera acabou; agora é tempo de avançar sob a luz da Palavra, permitindo que o Espírito Santo faça uma **\"faxina\"** no coração para que a vida espiritual flua como água viva.\n\n" .
-            "**5. Mudança de Estação:** Em Eclesiastes 3:1, há tempo determinado para tudo. A transição é um processo que exige paciência e perseverança. Israel chorou 30 dias por Moisés e precisou se levantar. Quem plantou em choro voltará com alegria (Sl 126:5). Esquecendo o que ficou para trás (Fp 3:13), a igreja é chamada a ver a **\"coisa nova\"** que Deus faz (Is 43:19).\n\n" .
-            "**Conclusão:** A palavra encerra-se com uma poderosa ativação de identidade. Atravessar o Jordão significa tomar posse daquilo que já foi prometido. A igreja é desafiada a declarar que a estação da seca terminou e que o tempo da colheita e da posse sobre as famílias e finanças chegou. Egito e mentalidade de escravo, nunca mais.";
+        $summaryText = "A ministração da Pastora Kelli trata da transição do povo de Israel. Após a morte de Moisés, Deus ordena a Josué: **\"Passa este Jordão\"** (Js 1:2). O rio é a fronteira entre sair do Egito e possuir a terra prometida. Chegamos até aqui pela graça e pela presença de Deus, e não por recursos ou méritos próprios.\n\n".
+            "**1. A Barreira da Mentalidade:** A pastora destaca que muitos saíram do Egito (o lugar da escravidão), mas o Egito ainda não saiu deles. Ela define o Jordão não apenas como um rio geográfico, mas como uma barreira mental e espiritual. Atravessar o Jordão exige **\"desmontar\"** a mentalidade de escravo - a pessoa que murmura, que tem saudades do passado de dor e que se sente inferior diante dos gigantes. A vitória começa na mente: é preciso saber quem você é em Deus para saber para onde você está indo.\n\n".
+            "**2. Coragem como Decisão:** Josué teve medo de assumir o legado de Moisés, e Deus repetiu: **\"Sê forte e corajoso\"** (Js 1:6-9), pois o Senhor está conosco por onde andarmos. Coragem é decisão, não sentimento: a emoção engana, e vivemos pelo que Deus disse. Quem fica paralisado no choro e na vitimização não avança, porque Deus se move pela Sua Palavra.\n\n".
+            "**3. A Presenção de Deus e o Jordão de Cada Um:** Em um momento profundo, a ministração identifica que o \"Jordão\" de muitos hoje são as águas amargas da falta de perdão, do orgulho, do ressentimento entre casais e do distanciamento entre pais e filhos. Essas **\"águas\"** impedem a família de entrar na Terra Prometida. Atravessar o Jordão significa posicionar-se, renunciar ao orgulho e pedir perdão, entendendo que a obediência gera consequências para as próximas gerações.\n\n".
+            "**4. A Dinâmica do Milagre:** O milagre da abertura das águas só aconteceu quando os sacerdotes colocaram os pés no rio. A lição é clara: Deus não abre o caminho para quem fica parado na margem chorando. O milagre exige o **\"passo de fé\"** em meio à incerteza. A estação da espera acabou; agora é tempo de avançar sob a luz da Palavra, permitindo que o Espírito Santo faça uma **\"faxina\"** no coração para que a vida espiritual flua como água viva.\n\n".
+            "**5. Mudança de Estação:** Em Eclesiastes 3:1, há tempo determinado para tudo. A transição é um processo que exige paciência e perseverança. Israel chorou 30 dias por Moisés e precisou se levantar. Quem plantou em choro voltará com alegria (Sl 126:5). Esquecendo o que ficou para trás (Fp 3:13), a igreja é chamada a ver a **\"coisa nova\"** que Deus faz (Is 43:19).\n\n".
+            '**Conclusão:** A palavra encerra-se com uma poderosa ativação de identidade. Atravessar o Jordão significa tomar posse daquilo que já foi prometido. A igreja é desafiada a declarar que a estação da seca terminou e que o tempo da colheita e da posse sobre as famílias e finanças chegou. Egito e mentalidade de escravo, nunca mais.';
 
         $summary = SermonSummary::create([
             'duty_schedule_id' => $schedule->id,
@@ -130,8 +131,8 @@ class DatabaseSeeder extends Seeder
             'minister_name' => 'Pastora Kelli Mendes',
             'service_date' => '2026-10-18',
             'location_name' => 'Casa de Israel - Catedral',
-            'cell_direction' => "Quebra gelo / Oração pela liderança / Louvor / Oferta / Kilo do Amor / Palavra / Avisos / DNA.",
-            'leader_guidelines' => "As ofertas das células são direcionadas para o projeto visão do futuro. Participe e divulgue nas células sobre a carteira de generosidade (cigenerosidade@gmail.com). As ofertas feitas pelo QrCode Pix devem ser contabilizadas em anexo no envelope e no relatório das células.",
+            'cell_direction' => 'Quebra gelo / Oração pela liderança / Louvor / Oferta / Kilo do Amor / Palavra / Avisos / DNA.',
+            'leader_guidelines' => 'As ofertas das células são direcionadas para o projeto visão do futuro. Participe e divulgue nas células sobre a carteira de generosidade (cigenerosidade@gmail.com). As ofertas feitas pelo QrCode Pix devem ser contabilizadas em anexo no envelope e no relatório das células.',
             'scripture_text' => 'Josué 1:1-9',
             'summary_text' => $summaryText,
             'approved_at' => '2026-10-19 14:00:00',
@@ -189,9 +190,9 @@ class DatabaseSeeder extends Seeder
         DutySchedule::create([
             'organization_id' => $catedral->id,
             'scribe_user_id' => $escribaCatedral->id,
-            'service_date' => \Carbon\Carbon::now()->addDays(12)->format('Y-m-d'),
+            'service_date' => Carbon::now()->addDays(12)->format('Y-m-d'),
             'service_time' => '19:00:00',
-            'deadline_at' => \Carbon\Carbon::now()->addDays(14)->format('Y-m-d H:i:s'),
+            'deadline_at' => Carbon::now()->addDays(14)->format('Y-m-d H:i:s'),
             'status' => 'pending',
             'notes' => 'Escala do próximo domingo à noite.',
         ]);

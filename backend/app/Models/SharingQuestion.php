@@ -21,4 +21,3 @@ class SharingQuestion extends Model
         return $this->belongsTo(SermonSummary::class);
     }
 }
-

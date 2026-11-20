@@ -11,6 +11,7 @@ import { SermonsLibrary } from './components/SermonsLibrary';
 import { UsersManager } from './components/UsersManager';
 import { SettingsManager } from './components/SettingsManager';
 import { DeadlineAlert } from './components/DeadlineAlert';
+import { HomeDashboard } from './components/HomeDashboard';
 import { PublicSermon } from './pages/PublicSermon';
 import { A4PreviewModal } from './components/A4PreviewModal';
 import { StatsOverview } from './components/StatsOverview';
@@ -20,7 +21,7 @@ import { SermonData } from './lib/sermonUtils';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState<TabKey>('editor');
+  const [currentTab, setCurrentTab] = useState<TabKey>('home');
   const [editingSermon, setEditingSermon] = useState<SermonData | null>(null);
   const [publicSermonId, setPublicSermonId] = useState<number | null>(null);
   const [globalPreviewOpen, setGlobalPreviewOpen] = useState(false);
@@ -98,7 +99,9 @@ function AppContent() {
       onOpenA4Preview={() => setGlobalPreviewOpen(true)}
       hasSermonToPreview={Boolean(editingSermon)}
     >
-      {currentTab !== 'schedules' && <DeadlineAlert onOpenSchedules={() => setCurrentTab('schedules')} />}
+      {currentTab !== 'schedules' && currentTab !== 'home' && <DeadlineAlert onOpenSchedules={() => setCurrentTab('schedules')} />}
+      {currentTab === 'home' && <HomeDashboard onNavigate={setCurrentTab} />}
+
       {currentTab === 'editor' && (
         <SermonEditor
           initialSermon={editingSermon}

@@ -7,6 +7,7 @@ import {
   Building2,
   Users,
   Settings,
+  House,
   Menu,
   Church,
   CalendarDays,
@@ -40,7 +41,7 @@ import {
   cn,
 } from '@sysgov/ui';
 
-export type TabKey = 'editor' | 'schedules' | 'review' | 'sermons' | 'organizations' | 'users' | 'settings';
+export type TabKey = 'home' | 'editor' | 'schedules' | 'review' | 'sermons' | 'organizations' | 'users' | 'settings';
 
 interface NavItem {
   key: TabKey;
@@ -127,6 +128,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       title: 'Operação',
       items: [
         {
+          key: 'home',
+          label: 'Início',
+          icon: House,
+          shortcut: 'H',
+          roles: ['admin', 'unit_admin', 'reviewer', 'scribe'],
+        },
+        {
           key: 'editor',
           label: 'Editor da Mensagem',
           icon: FileText,
@@ -211,6 +219,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       const key = e.key.toLowerCase();
       const map: Record<string, TabKey> = {
+        h: 'home',
         e: 'editor',
         s: 'schedules',
         r: 'review',
@@ -239,6 +248,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   }, [user, onSelectTab]);
 
   const tabLabels: Record<TabKey, { title: string; subtitle: string }> = {
+    home: {
+      title: 'Início',
+      subtitle: 'Resumo do que precisa da sua atenção',
+    },
     editor: {
       title: 'Editor da Palavra Dominical',
       subtitle: 'Redação estruturada e validação ortográfica pt-BR para folha única A4',

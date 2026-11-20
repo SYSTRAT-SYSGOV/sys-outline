@@ -9,6 +9,7 @@ use App\Models\SermonSummary;
 use App\Models\SharingQuestion;
 use App\Models\WeeklyAgendaItem;
 use App\Services\AnnouncementInheritanceService;
+use App\Services\SettingsService;
 use App\Support\Announcements;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -316,7 +317,7 @@ class SermonSummaryController extends Controller
                 'cell_direction' => 'required|string',
                 'leader_guidelines' => 'required|string',
                 'scripture_text' => 'required|string|max:120',
-                'summary_text' => 'required|string|max:3400', // Limite estrito de 3.400 caracteres
+                'summary_text' => 'required|string|max:'.$this->summaryLimit($input['organization_id'] ?? null),
                 'sharing_questions' => 'nullable|array',
                 'weekly_agenda' => 'nullable|array',
                 ...Announcements::rules(),
@@ -699,9 +700,10 @@ class SermonSummaryController extends Controller
         $user = $request->user();
         $this->authorize('submit', $sermonSummary);
 
-        if (mb_strlen($sermonSummary->summary_text) > 3400) {
+        $limit = $this->summaryLimit($sermonSummary->organization_id);
+        if (mb_strlen($sermonSummary->summary_text) > $limit) {
             return response()->json([
-                'message' => 'O resumo excede o limite máximo de 3.400 caracteres para folha única.',
+                'message' => 'O resumo excede o limite máximo de '.number_format($limit, 0, ',', '.').' caracteres para folha única.',
             ], 422);
         }
 
@@ -983,6 +985,14 @@ class SermonSummaryController extends Controller
     /**
      * Visualização pública de uma mensagem aprovada para líderes de célula.
      */
+    /**
+     * Limite de caracteres efetivo da unidade (configuração com herança).
+     */
+    private function summaryLimit(?int $organizationId): int
+    {
+        return (int) app(SettingsService::class)->get('summary_char_limit', $organizationId);
+    }
+
     public function publicView(SermonSummary $sermonSummary): JsonResponse
     {
         if ($sermonSummary->status !== 'approved') {

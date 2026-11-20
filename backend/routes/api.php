@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DutyScheduleController;
 use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\SermonSummaryController;
+use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Autenticação & Perfil
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Configurações (globais e por unidade)
+    Route::get('/settings', [SettingsController::class, 'index']);
+    Route::put('/settings', [SettingsController::class, 'updateGlobal'])->middleware('role:admin');
+    Route::put('/organizations/{organization}/settings', [SettingsController::class, 'updateUnit'])
+        ->middleware('role:admin,unit_admin');
 
     // Organizações (Catedral e Núcleos)
     Route::get('/organizations', [OrganizationController::class, 'index']);

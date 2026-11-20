@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\DutySchedule;
 use App\Notifications\DeadlineReminder;
+use App\Services\MailSettings;
 use Illuminate\Console\Command;
 
 class SendDeadlineReminders extends Command
@@ -14,6 +15,8 @@ class SendDeadlineReminders extends Command
 
     public function handle(): int
     {
+        app(MailSettings::class)->apply();
+
         $sent = 0;
 
         DutySchedule::with('scribe')

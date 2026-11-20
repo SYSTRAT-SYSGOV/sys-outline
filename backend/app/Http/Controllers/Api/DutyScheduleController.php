@@ -7,6 +7,7 @@ use App\Models\DutySchedule;
 use App\Models\SermonSummary;
 use App\Models\User;
 use App\Notifications\ScheduleReceived;
+use App\Services\MailSettings;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -293,6 +294,7 @@ class DutyScheduleController extends Controller
         $dutySchedule = $dutySchedule->fresh()->load(['organization', 'scribe', 'substitute', 'swappedFrom']);
 
         try {
+            app(MailSettings::class)->apply();
             $dutySchedule->scribe->notify(new ScheduleReceived($dutySchedule, $dutySchedule->swappedFrom));
         } catch (\Throwable $e) {
             report($e);

@@ -6,7 +6,15 @@ export type SettingKey =
   | 'summary_char_limit'
   | 'default_deadline_hours'
   | 'a4_footer_text'
-  | 'whatsapp_footer';
+  | 'whatsapp_footer'
+  | 'mail_enabled'
+  | 'mail_host'
+  | 'mail_port'
+  | 'mail_encryption'
+  | 'mail_username'
+  | 'mail_password'
+  | 'mail_from_address'
+  | 'mail_from_name';
 
 export type SettingSource = 'unit' | 'global' | 'default';
 
@@ -17,7 +25,7 @@ export interface AppSettings {
   whatsapp_footer: string;
 }
 
-export type EffectiveSettings = Record<SettingKey, { value: any; source: SettingSource }>;
+export type EffectiveSettings = Partial<Record<SettingKey, { value: any; source: SettingSource; is_set?: boolean }>>;
 
 /** Padrões iguais aos do backend (SettingsRegistry), usados até a API responder. */
 export const DEFAULT_SETTINGS: AppSettings = {

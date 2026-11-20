@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Support\SettingsRegistry;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,6 +16,7 @@ class SettingsService
 {
     /**
      * Valores efetivos com a origem de cada um (unit, global ou default).
+     * Chaves secretas voltam criptografadas; use secret() para o valor em claro.
      *
      * @return array<string, array{value: mixed, source: string}>
      */
@@ -27,7 +29,7 @@ class SettingsService
 
         $result = [];
         foreach (SettingsRegistry::keys() as $key) {
-            if ($unit->has($key)) {
+            if ($unit->has($key) && ! SettingsRegistry::isGlobalOnly($key)) {
                 $result[$key] = ['value' => json_decode($unit[$key], true), 'source' => 'unit'];
             } elseif ($global->has($key)) {
                 $result[$key] = ['value' => json_decode($global[$key], true), 'source' => 'global'];
@@ -39,9 +41,40 @@ class SettingsService
         return $result;
     }
 
+    /**
+     * Versão para a API: oculta as chaves restritas ao administrador e nunca devolve segredos.
+     *
+     * @return array<string, array{value: mixed, source: string, is_set?: bool}>
+     */
+    public function forViewer(?int $organizationId, User $viewer): array
+    {
+        $result = [];
+        foreach ($this->effective($organizationId) as $key => $entry) {
+            if (SettingsRegistry::isAdminOnly($key) && ! $viewer->isAdmin()) {
+                continue;
+            }
+            if (SettingsRegistry::isSecret($key)) {
+                $entry = ['value' => null, 'source' => $entry['source'], 'is_set' => $entry['source'] !== 'default'];
+            }
+            $result[$key] = $entry;
+        }
+
+        return $result;
+    }
+
     public function get(string $key, ?int $organizationId = null): mixed
     {
         return $this->effective($organizationId)[$key]['value'];
+    }
+
+    /**
+     * Valor em claro de uma chave secreta (ex.: senha SMTP), ou string vazia se não definida.
+     */
+    public function secret(string $key): string
+    {
+        $stored = $this->get($key);
+
+        return is_string($stored) && $stored !== '' ? Crypt::decryptString($stored) : '';
     }
 
     /**
@@ -74,6 +107,9 @@ class SettingsService
             if (! in_array($key, SettingsRegistry::keys(), true)) {
                 throw ValidationException::withMessages([$key => 'Configuração desconhecida.']);
             }
+            if ($organizationId && SettingsRegistry::isGlobalOnly($key)) {
+                throw ValidationException::withMessages([$key => 'Esta configuração só pode ser definida para o sistema todo.']);
+            }
             if ($value !== null) {
                 $rules = SettingsRegistry::rules($key);
                 if ($organizationId && $key === 'summary_char_limit') {
@@ -81,6 +117,9 @@ class SettingsService
                     $rules[] = 'max:'.$this->get($key);
                 }
                 $value = validator([$key => $value], [$key => $rules])->validate()[$key];
+                if (SettingsRegistry::isSecret($key) && $value !== null) {
+                    $value = Crypt::encryptString((string) $value);
+                }
             }
             $validated[$key] = $value;
         }
@@ -92,12 +131,14 @@ class SettingsService
                     continue;
                 }
                 $this->store($key, $value, $actor, $organizationId);
+
+                $secret = SettingsRegistry::isSecret($key);
                 DB::table('settings_audit_logs')->insert([
                     'user_id' => $actor->id,
                     'organization_id' => $organizationId,
                     'key' => $key,
-                    'old_value' => $old === null ? null : json_encode($old),
-                    'new_value' => $value === null ? null : json_encode($value),
+                    'old_value' => $old === null ? null : json_encode($secret ? '[definida]' : $old),
+                    'new_value' => $value === null ? null : json_encode($secret ? '[definida]' : $value),
                     'created_at' => now(),
                 ]);
             }

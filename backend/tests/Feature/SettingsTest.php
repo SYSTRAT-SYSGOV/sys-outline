@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\MailSettings;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SettingsTest extends TestCase
@@ -205,5 +208,90 @@ class SettingsTest extends TestCase
 
         $this->asToken($admin)->getJson('/api/settings')->assertJsonPath('data.a4_footer_text', ['value' => 'Catedral', 'source' => 'unit']);
         $this->asToken($admin)->getJson('/api/settings?scope=global')->assertJsonPath('data.a4_footer_text', ['value' => 'Rede', 'source' => 'global']);
+    }
+
+    public function test_mail_settings_are_visible_only_to_the_general_admin_and_never_expose_the_password(): void
+    {
+        $admin = $this->tokenFor('admin', 'catedral');
+        $unitAdmin = $this->tokenFor('unit_admin', 'nucleo-sul');
+
+        $this->asToken($admin)->putJson('/api/settings', ['settings' => [
+            'mail_host' => 'smtp.exemplo.com',
+            'mail_password' => 'segredo-super-secreto',
+        ]])->assertOk();
+
+        $this->asToken($unitAdmin)->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonMissingPath('data.mail_host')
+            ->assertJsonMissingPath('data.mail_password');
+
+        $response = $this->asToken($admin)->getJson('/api/settings?scope=global')
+            ->assertOk()
+            ->assertJsonPath('data.mail_host.value', 'smtp.exemplo.com')
+            ->assertJsonPath('data.mail_password.value', null)
+            ->assertJsonPath('data.mail_password.is_set', true);
+        $this->assertStringNotContainsString('segredo-super-secreto', $response->getContent());
+    }
+
+    public function test_mail_password_is_stored_encrypted_and_audited_without_the_plain_value(): void
+    {
+        $this->asToken($this->tokenFor('admin', 'catedral'))
+            ->putJson('/api/settings', ['settings' => ['mail_password' => 'segredo-super-secreto']])
+            ->assertOk();
+
+        $stored = DB::table('settings')->where('key', 'mail_password')->value('value');
+        $this->assertStringNotContainsString('segredo-super-secreto', $stored);
+        $this->assertSame('segredo-super-secreto', app(SettingsService::class)->secret('mail_password'));
+
+        $audit = DB::table('settings_audit_logs')->where('key', 'mail_password')->first();
+        $this->assertSame('"[definida]"', $audit->new_value);
+    }
+
+    public function test_mail_settings_cannot_be_overridden_by_a_unit(): void
+    {
+        $sul = $this->unit('nucleo-sul');
+
+        $this->asToken($this->tokenFor('unit_admin', 'nucleo-sul'))
+            ->putJson("/api/organizations/{$sul->id}/settings", ['settings' => ['mail_host' => 'smtp.outro.com']])
+            ->assertUnprocessable();
+    }
+
+    public function test_saved_smtp_settings_are_applied_to_the_mail_config(): void
+    {
+        $this->asToken($this->tokenFor('admin', 'catedral'))->putJson('/api/settings', ['settings' => [
+            'mail_enabled' => true,
+            'mail_host' => 'smtp.exemplo.com',
+            'mail_port' => 465,
+            'mail_encryption' => 'ssl',
+            'mail_username' => 'avisos@exemplo.com',
+            'mail_password' => 'segredo-super-secreto',
+            'mail_from_address' => 'avisos@exemplo.com',
+            'mail_from_name' => 'Escriba',
+        ]])->assertOk();
+
+        $this->assertTrue(app(MailSettings::class)->apply());
+        $this->assertSame('smtp', config('mail.default'));
+        $this->assertSame('smtp.exemplo.com', config('mail.mailers.smtp.host'));
+        $this->assertSame(465, config('mail.mailers.smtp.port'));
+        $this->assertSame('smtps', config('mail.mailers.smtp.scheme'));
+        $this->assertSame('segredo-super-secreto', config('mail.mailers.smtp.password'));
+        $this->assertSame('avisos@exemplo.com', config('mail.from.address'));
+    }
+
+    public function test_test_mail_requires_admin_and_an_active_smtp_configuration(): void
+    {
+        $this->asToken($this->tokenFor('unit_admin', 'nucleo-sul'))->postJson('/api/settings/mail/test')->assertForbidden();
+
+        $admin = $this->tokenFor('admin', 'catedral');
+        $this->asToken($admin)->postJson('/api/settings/mail/test')->assertUnprocessable();
+
+        $this->asToken($admin)->putJson('/api/settings', ['settings' => [
+            'mail_enabled' => true,
+            'mail_host' => '127.0.0.1',
+            'mail_port' => 1,
+        ]])->assertOk();
+        $this->asToken($admin)->postJson('/api/settings/mail/test')
+            ->assertUnprocessable()
+            ->assertJsonPath('message', fn ($message) => str_starts_with($message, 'Não foi possível enviar'));
     }
 }

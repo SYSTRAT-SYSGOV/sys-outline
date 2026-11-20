@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Configurações (globais e por unidade)
     Route::get('/settings', [SettingsController::class, 'index']);
     Route::put('/settings', [SettingsController::class, 'updateGlobal'])->middleware('role:admin');
+    Route::post('/settings/mail/test', [SettingsController::class, 'sendTestMail'])->middleware('role:admin');
     Route::put('/organizations/{organization}/settings', [SettingsController::class, 'updateUnit'])
         ->middleware('role:admin,unit_admin');
 

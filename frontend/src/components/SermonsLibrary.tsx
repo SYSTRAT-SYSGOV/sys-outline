@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
 import { SermonData } from '../lib/sermonUtils';
-import { DataTable, ColumnDef, DataTableFilter } from './DataTable';
+import { DataTable, ColumnDef } from './DataTable';
 import { A4PreviewModal } from './A4PreviewModal';
 import { copySermonToClipboard } from '../lib/whatsappFormatter';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import {
   BookOpen,
   Eye,
   Share2,
-  Calendar,
   Building,
-  User,
   CheckCircle2,
-  AlertCircle,
   ExternalLink,
 } from 'lucide-react';
 
@@ -23,8 +18,8 @@ interface SermonsLibraryProps {
   onSelectForEdit?: (sermon: SermonData) => void;
 }
 
-export const SermonsLibrary: React.FC<SermonsLibraryProps> = ({ onSelectForEdit }) => {
-  const { user } = useAuth();
+export const SermonsLibrary: React.FC<SermonsLibraryProps> = ({ onSelectForEdit: _onSelectForEdit }) => {
+  
   const [sermons, setSermons] = useState<SermonData[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewSermon, setPreviewSermon] = useState<SermonData | null>(null);

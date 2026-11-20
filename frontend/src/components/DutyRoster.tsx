@@ -8,11 +8,8 @@ import { Input } from './ui/input';
 import {
   Calendar,
   Clock,
-  User,
   Plus,
   Building,
-  Edit,
-  ArrowRight,
   AlertTriangle,
   CheckCircle2,
   FileEdit,

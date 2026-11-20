@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { DataTable, ColumnDef, DataTableFilter } from './DataTable';
+import { DataTable } from './DataTable';
 import { Button } from './ui/button';
-import { Card, CardHeader, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { Building2, Plus, QrCode, Image as ImageIcon, MapPin, Phone, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, Plus, QrCode, MapPin, Edit } from 'lucide-react';
 
 interface Organization {
   id: number;

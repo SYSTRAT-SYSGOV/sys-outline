@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Menu, Eye, Shield, Sparkles } from 'lucide-react';
+import { Menu, Eye, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface AppHeaderProps {

@@ -9,20 +9,16 @@ import { ReturnReviewModal } from './ReturnReviewModal';
 import { ApprovalSuccessModal } from './ApprovalSuccessModal';
 import { ReviewWorkflowStepper } from './ReviewWorkflowStepper';
 import { WhatsAppShareModal } from './WhatsAppShareModal';
-import { Button, Badge, Card, CardHeader, CardTitle, CardContent } from '@sysgov/ui';
+import { Button, Badge } from '@sysgov/ui';
 import {
   CheckCircle,
   XCircle,
-  Clock,
   ArrowRight,
-  User,
-  History,
   Building,
   AlertCircle,
   Eye,
   CheckCircle2,
   ArrowLeft,
-  FileText,
   Share2,
   CheckSquare,
   Square,

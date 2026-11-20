@@ -9,7 +9,7 @@ import {
   Button,
   Badge,
 } from '@sysgov/ui';
-import { CheckCircle2, Share2, Eye, Copy, Check, ExternalLink, Calendar, Building, Sparkles } from 'lucide-react';
+import { CheckCircle2, Share2, Eye, Copy, Check, Calendar, Building } from 'lucide-react';
 import { SermonData } from '../lib/sermonUtils';
 
 interface ApprovalSuccessModalProps {

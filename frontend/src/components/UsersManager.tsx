@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { DataTable, ColumnDef, DataTableFilter } from './DataTable';
+import { DataTable, ColumnDef } from './DataTable';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -9,11 +9,7 @@ import {
   Users,
   UserPlus,
   Building,
-  Phone,
-  Mail,
-  Shield,
   CheckCircle2,
-  AlertCircle,
   Edit,
 } from 'lucide-react';
 
@@ -357,6 +353,7 @@ export const UsersManager: React.FC = () => {
                 </label>
                 <Input
                   type="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="text-xs font-mono"

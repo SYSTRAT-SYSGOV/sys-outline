@@ -9,8 +9,6 @@ import {
   Calendar,
   Users,
   RefreshCw,
-  AlertTriangle,
-  Award,
 } from 'lucide-react';
 
 interface DashboardStats {

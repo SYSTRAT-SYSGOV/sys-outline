@@ -78,7 +78,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onSelectTab,
   children,
   onOpenA4Preview,
-  hasSermonToPreview = false,
+  hasSermonToPreview: _hasSermonToPreview = false,
 }) => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
